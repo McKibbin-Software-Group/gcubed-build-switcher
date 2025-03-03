@@ -1,0 +1,117 @@
+{
+  "name": "G-Cubed Build Switcher Development",
+  "build": {
+    "context": "..",
+    "dockerfile": "./Dockerfile",
+    "args": {
+      "VARIANT": "1-3.12",
+      "NODE_VERSION": "lts/*"
+    }
+  },
+  "portsAttributes": {
+    "8888": {
+      "label": "gCubed Chart",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "features": {},
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "ms-vsliveshare.vsliveshare",
+        // The following are not required inside the devcontainer. Don't install them.
+        // "ms-vscode-remote.vscode-remote-extensionpack",
+        // "ms-vscode-remote.remote-ssh-explorer",
+        // "ms-vscode.remote-repositories",
+        // "ms-vscode.remote-containers",
+        // "ms-vscode.remote-ssh",
+        // "ms-vscode.remote-ssh-edit",
+        // Speech runs on the local machine, not in the container.
+        // "ms-vscode.vscode-speech",
+        "GitHub.remotehub",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "GitHub.copilot",
+        "GitHub.vscode-pull-request-github",
+        "mhutchie.git-graph",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "gruntfuggly.todo-tree",
+        "mechatroner.rainbow-csv"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.formatting.provider": "black",
+        "python.formatting.blackPath": "/usr/local/py-utils/bin/black",
+        "python.linting.banditPath": "/usr/local/py-utils/bin/bandit",
+        "python.linting.flake8Path": "/usr/local/py-utils/bin/flake8",
+        "python.linting.mypyPath": "/usr/local/py-utils/bin/mypy",
+        "python.linting.pycodestylePath": "/usr/local/py-utils/bin/pycodestyle",
+        "python.linting.pydocstylePath": "/usr/local/py-utils/bin/pydocstyle",
+        "python.linting.pylintPath": "/usr/local/py-utils/bin/pylint",
+
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.detectIndentation": false,
+        "editor.formatOnPaste": true,
+        "editor.formatOnSave": false,
+        "editor.formatOnType": true,
+        "editor.insertSpaces": true,
+        "editor.minimap.enabled": true,
+        "editor.renderWhitespace": "trailing",
+        "editor.renderControlCharacters": true,
+        "editor.guides.indentation": true,
+        "editor.renderLineHighlight": "all",
+        "editor.renderFinalNewline": "on",
+        "editor.rulers": [80, 120],
+        "editor.tabSize": 2,
+        "editor.wordWrap": "off",
+
+        "files.eol": "\n",
+        "terminal.integrated.inheritEnv": true,
+        "terminal.integrated.cwd": "${workspaceFolder}",
+        "telemetry.telemetryLevel": "off",
+        "workbench.startupEditor": "none",
+        "workbench.colorTheme": "Default Dark Modern",
+        "workbench.editorAssociations": {
+          "README.md": "vscode.markdown.preview.editor"
+        },
+
+        "[javascript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "prettier.trailingComma": "es5",
+          "prettier.semi": false,
+          "prettier.tabWidth": 2,
+          "prettier.printWidth": 120
+        },
+        "[html]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.wordWrap": "off"
+        },
+        "[css]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "files.trimTrailingWhitespace": true
+        },
+        // Don't show in vscode explorer. Files are still accessible via terminal, eg: 'code .devcontainer/devcontainer.json'
+        "files.exclude": {
+          "**/.git": true,
+          "**/.svn": true,
+          "**/.hg": true,
+          "**/CVS": true,
+          "**/.DS_Store": true,
+          "**/Thumbs.db": true,
+          "**/.devcontainer": true,
+          "**/.github": true,
+          "**/.vscode": true
+        }
+      }
+    }
+  },
+  "postCreateCommand": "npm install && uv pip install -r requirements.txt"
+}
