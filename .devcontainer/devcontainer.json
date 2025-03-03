@@ -8,6 +8,14 @@
       "NODE_VERSION": "lts/*"
     }
   },
+  "containerEnv": {
+    // ensure that uv copies dependencies into the venvs - as otherwise venvs are linked from cache
+    // which disappears when the container is rebuilt.
+    "UV_LINK_MODE": "copy",
+    "GCUBED_ROOT": "${containerWorkspaceFolder}",
+    "GCUBED_PYTHON_PREREQUISITES_REPO": "https://github.com/McKibbin-Software-Group/python-gcubed-prerequisites",
+    "GCUBED_CODE_PACKAGE_NAME=gcubed": "gcubed"
+  },
   "portsAttributes": {
     "8888": {
       "label": "gCubed Chart",
@@ -108,10 +116,14 @@
           "**/Thumbs.db": true,
           "**/.devcontainer": true,
           "**/.github": true,
-          "**/.vscode": true
+          "**/.vscode": true,
+          "**/venv_gcubed*": true
         }
       }
     }
   },
-  "postCreateCommand": "npm install && uv pip install -r requirements.txt"
+  // Install any base prerequisites. Note - uv will install anything in requirements.txt to the system context. Assuming
+  // this is needed in all cases.  Otherwise you should install requirements into the appropriate venv.
+  "postCreateCommand": "npm install && if [ -f requirements.txt ]; then sudo uv pip install --system -r requirements.txt; fi"
+
 }
