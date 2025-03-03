@@ -1,6 +1,9 @@
 # Test files
 test-output/
 
+#G-Cubed virtual environments
+venv_gcubed*
+
 # Any CSV files that are diagnostics from a model run
 **/diagnostics/
 **/diagnostics/**
