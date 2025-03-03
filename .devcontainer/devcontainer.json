@@ -14,7 +14,7 @@
     "UV_LINK_MODE": "copy",
     "GCUBED_ROOT": "${containerWorkspaceFolder}",
     "GCUBED_PYTHON_PREREQUISITES_REPO": "https://github.com/McKibbin-Software-Group/python-gcubed-prerequisites",
-    "GCUBED_CODE_PACKAGE_NAME=gcubed": "gcubed"
+    "GCUBED_CODE_PACKAGE_NAME": "gcubed"
   },
   "portsAttributes": {
     "8888": {
