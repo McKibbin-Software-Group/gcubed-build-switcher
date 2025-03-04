@@ -21,7 +21,9 @@ If a required build is not available in a venv, then this module will pull the a
       "GCUBED_CODE_PACKAGE_NAME=gcubed": "gcubed"
     },
     ```
-    Note: `GCUBED_ROOT` should point to the root of your project within the container.
+    **NOTE:** `GCUBED_ROOT` should point to the root of your project within the container.
+
+    **NOTE:**  If you want to disable the auto build switching for a customer/devcontainer, set any value for GCUBED_CODE_AUTO_BUILD_SWITCHER_DISABLED (eg TRUE) in the environment. This can be set in the customer-configuration.env file for a 'permanent' change to a specific repo's devcontainer, or can be export/unset on the fly in a terminal session.
 
  2. Ensure that `uv` is being installed in the G-Cubed devcontainer
 
