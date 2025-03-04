@@ -135,6 +135,6 @@
   // Install any base prerequisites. Note - uv will install anything in requirements.txt to the system context. Assuming
   // this is needed in all cases.  Otherwise you should install requirements into the appropriate venv.
   // "postCreateCommand": "npm install && if [ -f requirements.txt ]; then sudo uv pip install --system -r requirements.txt; fi"
-  "postCreateCommand": "if [ -f requirements.txt ]; then sudo uv pip install --system -r requirements.txt; fi; if [ -f pyproject.toml ]; then sudo uv pip install --system -r pyproject.toml; fi;"
+  "postCreateCommand": "if [ -f requirements.txt ]; then sudo $(which uv) pip install --system -r requirements.txt; fi; if [ -f pyproject.toml ]; then sudo $(which uv) pip install --system -r pyproject.toml; fi;"
 
 }
