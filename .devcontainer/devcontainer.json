@@ -4,13 +4,22 @@
     "context": "..",
     "dockerfile": "./Dockerfile",
     "args": {
-      "VARIANT": "1-3.12",
-      "NODE_VERSION": "lts/*"
+      "VARIANT": "1-3.12"
+      // No need for Node in the container
+      // "NODE_VERSION": "lts/*"
     }
   },
+  "runArgs": [
+        "--env-file",
+        "${localWorkspaceFolder}/.devcontainer/customer-configuration.env"
+    ],
   "containerEnv": {
-    // ensure that uv copies dependencies into the venvs - as otherwise venvs are linked from cache
+    // Ensure that uv copies dependencies into the venvs - as otherwise venvs are linked from cache
     // which disappears when the container is rebuilt.
+    // These are 'universal' configuration required by all versions of this devcontainer
+    // Customer-specific configuration is found externally.  If you want to disable the auto
+    // build switching for a customer/devcontainer, set any value for GCUBED_CODE_AUTO_BUILD_SWITCHER_DISABLED
+    // (eg TRUE) in the customer-configuration.env file
     "UV_LINK_MODE": "copy",
     "GCUBED_ROOT": "${containerWorkspaceFolder}",
     "GCUBED_PYTHON_PREREQUISITES_REPO": "https://github.com/McKibbin-Software-Group/python-gcubed-prerequisites",
@@ -124,6 +133,7 @@
   },
   // Install any base prerequisites. Note - uv will install anything in requirements.txt to the system context. Assuming
   // this is needed in all cases.  Otherwise you should install requirements into the appropriate venv.
-  "postCreateCommand": "npm install && if [ -f requirements.txt ]; then sudo uv pip install --system -r requirements.txt; fi"
+  // "postCreateCommand": "npm install && if [ -f requirements.txt ]; then sudo uv pip install --system -r requirements.txt; fi"
+  "postCreateCommand": "if [ -f requirements.txt ]; then sudo uv pip install --system -r requirements.txt; fi"
 
 }
