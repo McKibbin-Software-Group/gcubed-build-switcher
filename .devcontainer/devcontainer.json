@@ -56,7 +56,8 @@
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
         "gruntfuggly.todo-tree",
-        "mechatroner.rainbow-csv"
+        "mechatroner.rainbow-csv",
+        "tamasfe.even-better-toml"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",
