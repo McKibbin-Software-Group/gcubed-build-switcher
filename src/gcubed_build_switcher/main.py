@@ -276,8 +276,8 @@ def prepare_local_venv(build_tag):
 def set_vscode_python_interpreter(build_tag):
     """Tell VSCode extension to use the specified interpreter."""
     venv_name = get_venv_name(build_tag)
-
-    python_path = os.path.join( venv_name, "bin", "python")
+    venv_path = get_venv_directory_for_build(venv_name)
+    python_path = os.path.join(venv_path, "bin", "python")
 
     print(f"Trying to switch python interpreter to: {python_path}")
 
@@ -285,7 +285,7 @@ def set_vscode_python_interpreter(build_tag):
         response = requests.post(
             "http://127.0.0.1:9876/set-interpreter",
             json={"pythonPath": python_path},
-            timeout=2,
+            timeout=1000,
         )
         if response.status_code == 200:
             print(f"VSCode Python interpreter set to: {python_path}")
