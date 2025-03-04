@@ -248,7 +248,11 @@ def activate_or_build_and_activate_venv(build_tag):
 
         # Try to activate the newly created venv
         print("Virtual environment created, attempting to activate...")
-        return activate_venv(venv_path)
+        result = activate_venv(venv_path)
+        if result:
+            print(f"Spawning an interactive shell with the virtual environment activated...")
+            subprocess.run(['bash', '-c', f'source {venv_path}/bin/activate && exec bash'])
+        return result
 
     except subprocess.CalledProcessError as e:
         print(f"Error creating virtual environment: {e}")
