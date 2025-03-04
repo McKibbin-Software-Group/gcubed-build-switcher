@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gcubed-build-switcher"
+version = "0.1.0"
+description = "Provides a way for G-Cubed model simulations to satisfy their dependencies on the fly."
+readme = "README.md"
+authors = [
+    {name = "McKibbin Software Group", email = "McKibbinSoftwareGroup@gmail.com"}
+]
+license = {text = "Copyright (c) 2025 McKibbin Software Group"}
+requires-python = ">=3.6"
+classifiers = [
+    "Private :: Do Not Upload",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Economics",
+]
+dependencies = [
+]
+
+[project.urls]
+"Homepage" = "https://github.com/McKibbin-Software-Group/gcubed-build-switcher"
+"Repository" = "https://github.com/McKibbin-Software-Group/gcubed-build-switcher.git"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
