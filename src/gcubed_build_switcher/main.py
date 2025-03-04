@@ -135,12 +135,52 @@ def install_packages(files, python_path, temp_dir_name, gcubed_root, config_para
 
         subprocess.run(cmd, cwd=gcubed_root, check=True)
 
+def check_for_disabled_flag():
+    overridden = os.environ.get("GCUBED_CODE_AUTO_BUILD_SWITCHER_DISABLED")
+    if overridden:
+        warning_message = "WARNING: Automatic G-Cubed Code build switching disabled. Skipping virtual environment activation."
+        warning_message_left_border = "!!!   "
+        warning_message_right_border = "   !!!"
+        border = "!" * (warning_message_left_border.__len__() + warning_message.__len__() + warning_message_right_border.__len__())
+        warning_message_blank_line = warning_message_left_border + " " * warning_message.__len__() + warning_message_right_border
+        # Check if terminal supports color
+        use_color = (
+            hasattr(sys.stdout, "isatty")
+            and sys.stdout.isatty()
+            and os.environ.get("NO_COLOR") is None
+        )
+        if use_color:
+            # Yellow bold text on red background for maximum visibility
+            print("\033[1;33;41m" + border + "\033[0m")
+            print("\033[1;33;41m" + warning_message_blank_line + "\033[0m")
+            print(
+                "\033[1;33;41m" + warning_message_left_border + warning_message + warning_message_right_border + "\033[0m"
+            )
+            print("\033[1;33;41m" + warning_message_blank_line + "\033[0m")
+            print("\033[1;33;41m" + border + "\033[0m")
+        else:
+            # Fallback for terminals without color support
+            print(border)
+            print(warning_message_blank_line)
+            print(
+                warning_message_left_border
+                + warning_message
+                + warning_message_right_border
+            )
+            print(warning_message_blank_line)
+            print(border)
+        return True
+    return False
 
 def activate_or_build_and_activate_venv(build_tag):
     """
     Tries to activate the build. If the build is not found, it will try to create
     a venv for that build and then activate it.
     """
+
+    if check_for_disabled_flag():
+        return True
+
     venv_name = get_venv_name(build_tag)
     venv_path = get_venv_directory_for_build(venv_name)
 
@@ -238,7 +278,7 @@ def main():
         sys.exit(1)
 
     print(
-        f"\nSuccessfully activated venv version: {gcubed_build_tag}, starting simulation..."
+        f"\nSuccess. Starting simulation..."
     )
 
     #### Continue running your code here ====>>
