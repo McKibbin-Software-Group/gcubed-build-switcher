@@ -21,6 +21,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Economics",
 ]
 dependencies = [
+  "requests"
 ]
 
 [project.urls]

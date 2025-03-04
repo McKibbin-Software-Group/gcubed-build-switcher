@@ -5,6 +5,7 @@ import sys
 import subprocess
 import shutil
 import glob
+import requests
 
 """
 Different G-Cubed economic models have different dependencies on G-Cubed Code library builds.
@@ -135,14 +136,23 @@ def install_packages(files, python_path, temp_dir_name, gcubed_root, config_para
 
         subprocess.run(cmd, cwd=gcubed_root, check=True)
 
+
 def check_for_disabled_flag():
     overridden = os.environ.get("GCUBED_CODE_AUTO_BUILD_SWITCHER_DISABLED")
     if overridden:
         warning_message = "WARNING: Automatic G-Cubed Code build switching disabled. Skipping virtual environment activation."
         warning_message_left_border = "!!!   "
         warning_message_right_border = "   !!!"
-        border = "!" * (warning_message_left_border.__len__() + warning_message.__len__() + warning_message_right_border.__len__())
-        warning_message_blank_line = warning_message_left_border + " " * warning_message.__len__() + warning_message_right_border
+        border = "!" * (
+            warning_message_left_border.__len__()
+            + warning_message.__len__()
+            + warning_message_right_border.__len__()
+        )
+        warning_message_blank_line = (
+            warning_message_left_border
+            + " " * warning_message.__len__()
+            + warning_message_right_border
+        )
         # Check if terminal supports color
         use_color = (
             hasattr(sys.stdout, "isatty")
@@ -154,7 +164,11 @@ def check_for_disabled_flag():
             print("\033[1;33;41m" + border + "\033[0m")
             print("\033[1;33;41m" + warning_message_blank_line + "\033[0m")
             print(
-                "\033[1;33;41m" + warning_message_left_border + warning_message + warning_message_right_border + "\033[0m"
+                "\033[1;33;41m"
+                + warning_message_left_border
+                + warning_message
+                + warning_message_right_border
+                + "\033[0m"
             )
             print("\033[1;33;41m" + warning_message_blank_line + "\033[0m")
             print("\033[1;33;41m" + border + "\033[0m")
@@ -172,7 +186,8 @@ def check_for_disabled_flag():
         return True
     return False
 
-def activate_or_build_and_activate_venv(build_tag):
+
+def prepare_local_venv(build_tag):
     """
     Tries to activate the build. If the build is not found, it will try to create
     a venv for that build and then activate it.
@@ -248,11 +263,7 @@ def activate_or_build_and_activate_venv(build_tag):
 
         # Try to activate the newly created venv
         print("Virtual environment created, attempting to activate...")
-        result = activate_venv(venv_path)
-        if result:
-            print(f"Spawning an interactive shell with the virtual environment activated...")
-            subprocess.run(['bash', '-c', f'source {venv_path}/bin/activate && exec bash'])
-        return result
+        return activate_venv(venv_path)
 
     except subprocess.CalledProcessError as e:
         print(f"Error creating virtual environment: {e}")
@@ -260,6 +271,40 @@ def activate_or_build_and_activate_venv(build_tag):
     except Exception as e:
         print(f"Unexpected error: {e}")
         return False
+
+
+def set_vscode_python_interpreter(build_tag):
+    """Tell VSCode extension to use the specified interpreter."""
+    venv_name = get_venv_name(build_tag)
+
+    python_path = str("." / venv_name / "bin" / "python")
+
+    print(f"Trying to switch python interpreter to: {python_path}")
+
+    try:
+        response = requests.post(
+            "http://127.0.0.1:9876/set-interpreter",
+            json={"pythonPath": python_path},
+            timeout=2,
+        )
+        if response.status_code == 200:
+            print(f"VSCode Python interpreter set to: {python_path}")
+            return True
+        else:
+            print(f"Failed to set interpreter: {response.text}")
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"Communication with VSCode extension failed: {e}")
+        print("Is the extension installed and running? Please contact G-Cubed support.")
+        return False
+
+
+def activate_or_build_and_activate_venv(build_tag):
+    # if local venv is up, then try to activate it via the custom vscode extension
+    if prepare_local_venv(build_tag) is not False:
+        return set_vscode_python_interpreter(build_tag)
+    # no venv
+    return False
 
 
 def main():
@@ -281,9 +326,7 @@ def main():
         )
         sys.exit(1)
 
-    print(
-        f"\nSuccess. Starting simulation..."
-    )
+    print(f"\nSuccess. Starting simulation...")
 
     #### Continue running your code here ====>>
 
