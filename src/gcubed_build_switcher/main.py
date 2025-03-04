@@ -277,7 +277,7 @@ def set_vscode_python_interpreter(build_tag):
     """Tell VSCode extension to use the specified interpreter."""
     venv_name = get_venv_name(build_tag)
 
-    python_path = str("." / venv_name / "bin" / "python")
+    python_path = os.path.join(".", venv_name, "bin", "python")
 
     print(f"Trying to switch python interpreter to: {python_path}")
 
