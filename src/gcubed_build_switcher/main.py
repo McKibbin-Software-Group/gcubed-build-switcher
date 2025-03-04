@@ -221,13 +221,13 @@ def prepare_local_venv(build_tag):
     try:
         # Create new venv if it doesn't already exist (no probs if it already does)
         print(f"Creating virtual environment for build {build_tag}...")
-        subprocess.run(["uv", "venv", venv_name], cwd=gcubed_root, check=True)
+        subprocess.run(["uv", "venv", "--system-site-packages", venv_name], cwd=gcubed_root, check=True)
 
-        # Create temporary directory
+        # Create temporary directory name
         temp_dir_name = get_venv_name("temp")
         temp_dir_path = os.path.join(gcubed_root, temp_dir_name)
 
-        # Remove temp directory if it exists
+        # Remove temp directory if it already exists
         if os.path.exists(temp_dir_path):
             shutil.rmtree(temp_dir_path)
 
