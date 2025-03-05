@@ -1,4 +1,5 @@
 # Module Description
+TODO: Update with new client/server mode of operation.
 
 Different G-Cubed economic models have different dependencies on G-Cubed Code library builds.  Python scripts, which run simulations and create projections based on these models, are aware of the G-Cubed Code library version required by the model they are using.
 
@@ -32,3 +33,9 @@ If a required build is not available in a venv, then this module will pull the a
  3. At the beginning of a simulation script import the `activate_or_build_and_activate_venv` functionion from this module and pass it a G-Cubed Code build tag which corresponds with a tag in the G-Cubed Code repo.  If that completes successfully then continue as normal with your script.
 
  A simple example of how to use this is in the `main()` function of the module.
+
+## Testing
+
+```bash
+python -m src.gcubed_build_switcher.cli adb_0001
+```
