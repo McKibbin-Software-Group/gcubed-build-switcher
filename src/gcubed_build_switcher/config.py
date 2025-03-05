@@ -25,8 +25,21 @@ def get_optional_env_var(name, default=None):
     return os.environ.get(name, default)
 
 def is_feature_disabled(feature_name):
-    """Check if a feature is disabled via environment variable. Env variable name is GCUBED_CODE_<feature_name\>_DISABLED. Variable can have any value, it just has to exist to disable the feature."""
-    return bool( os.environ.get(f"GCUBED_CODE_{feature_name}_DISABLED") is None)
+    """
+      The environment variable name is formatted as GCUBED_CODE_<feature_name>_DISABLED.
+      The variable can have any value; it just has to exist to disable the feature.
+
+      Args:
+        feature_name (str): The name of the feature to check.
+
+      Returns:
+        bool: True if the feature is disabled, False otherwise.
+    """
+    environment_variable = f"GCUBED_CODE_{feature_name}_DISABLED"
+    print(f"Checking environment variable {environment_variable}")
+    feature_is_disabled = os.environ.get(environment_variable) is not None
+    print(f"Feature {feature_name} is {'disabled' if feature_is_disabled else 'enabled'}")
+    return bool(feature_is_disabled)
 
 def get_gcubed_root():
     """Get the G-Cubed root directory from environment."""
