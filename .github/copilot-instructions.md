@@ -4,6 +4,10 @@ Always use best-practice when generating code.
 
 Provide concise responses.
 
+Generated code should strongly adhere to DRY as one of the key best-practices.
+Complex code should always be broken into simple steps managed by function and/or class (method) calls. Rely heavily on helper functions to achieve this.
+Naming of variables, parameters, functions, classes, methods, properties etc should all be long and descriptive.
+
 When asked coding or clarification questions only respond with code or code snippets if necessary to explain the answer.
 Prefer code snippets to code if that is sufficient to answer and explain.
 When providing snippets always highlight what has changed and explain each change.
