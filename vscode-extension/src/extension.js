@@ -99,6 +99,8 @@ function handleSetInterpreterRequest(req, res) {
       try {
         // Step 4: Get Python environments and validate path
         const pythonApi = await PythonExtension.api();
+        // Force a refresh of the environments
+        await pythonApi.environments.refreshEnvironments()
         const knownEnvironments = pythonApi.environments.known;
 
         // Step 5: Check if path exists in known environments
