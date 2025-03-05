@@ -10,10 +10,8 @@ from .config import (
     get_gcubed_root,
     get_package_name,
     get_prerequisites_repo_url,
-    is_feature_disabled,
     ConfigurationError,
 )
-from .messaging import display_warning
 from .packages import install_packages
 
 def get_venv_name(gcubed_code_build_tag):
@@ -80,6 +78,7 @@ def activate_venv(venv_path):
         print(str(e))
         sys.exit(1)
     except subprocess.CalledProcessError as e:
+        # NOTE: DO NOT DELETE THE VENV IF THE PACKAGE IS NOT FOUND - IT MAY BE THERE FOR OTHER REASONS
         print(f"Error looking for prerequisite package '{package_name}' in virtual environment: {e}.")
         return False
 
@@ -231,12 +230,6 @@ def prepare_local_venv(build_tag):
     Returns:
         bool: True if activation successful, False otherwise
     """
-    # Check if build switching is disabled
-    if is_feature_disabled("CODE_AUTO_BUILD_SWITCHER"):
-        warning_message = "WARNING: Automatic G-Cubed Code build switching disabled. Skipping virtual environment activation."
-        display_warning(warning_message)
-        return True
-
     venv_name = get_venv_name(build_tag)
     venv_path = get_venv_directory_for_build(venv_name)
 
