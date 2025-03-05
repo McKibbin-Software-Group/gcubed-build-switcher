@@ -1,6 +1,9 @@
 # Test files
 test-output/
 
+# scratch files
+scratch/
+
 #G-Cubed virtual environments
 venv_gcubed*
 
