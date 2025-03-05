@@ -99,6 +99,59 @@ def activate_venv(venv_path):
 
     return True
 
+
+def validate_build_tag(build_tag):
+    """
+    Validates if the specified build tag exists in the prerequisites repository.
+
+    Args:
+        build_tag (str): The G-Cubed code build tag
+
+    Returns:
+        tuple: (bool, temp_dir_path) indicating success and path to temp clone
+    """
+    try:
+        gcubed_root = get_gcubed_root()
+        repo_url = get_prerequisites_repo_url()
+
+        # Create temporary directory name
+        temp_dir_name = get_venv_name(DEFAULT_TEMP_DIR_SUFFIX)
+        temp_dir_path = os.path.join(gcubed_root, temp_dir_name)
+
+        # Remove temp directory if it already exists
+        if os.path.exists(temp_dir_path):
+            shutil.rmtree(temp_dir_path)
+
+        # Clone the repository with the specific build tag
+        print(f"Validating build tag {build_tag}...")
+        clone_cmd = [
+            "git",
+            "clone",
+            "--depth",
+            "1",
+            "--single-branch",
+            "--branch",
+            build_tag,
+            repo_url,
+            temp_dir_name,
+        ]
+        subprocess.run(clone_cmd, cwd=gcubed_root, check=True)
+
+        return True, temp_dir_path
+
+    except ConfigurationError as e:
+        print(str(e))
+        return False, None
+    except subprocess.CalledProcessError as e:
+        print(
+            f"Error: Build tag '{build_tag}' does not exist in the prerequisites repository."
+        )
+        # Clean up temp directory if it was created
+        if os.path.exists(temp_dir_path):
+            shutil.rmtree(temp_dir_path)
+        return False, None
+
+
 def create_venv_for_build(build_tag):
     """
     Create a virtual environment for the specified build tag.
@@ -109,32 +162,23 @@ def create_venv_for_build(build_tag):
     Returns:
         bool: True if creation successful, False otherwise
     """
+    # First validate the build tag
+    is_valid, temp_dir_path = validate_build_tag(build_tag)
+    if not is_valid:
+        return False
+
     try:
         gcubed_root = get_gcubed_root()
-        repo_url = get_prerequisites_repo_url()
-
         venv_name = get_venv_name(build_tag)
         venv_path = os.path.join(gcubed_root, venv_name)
 
-        # Create temporary directory name
-        temp_dir_name = get_venv_name(DEFAULT_TEMP_DIR_SUFFIX)
-        temp_dir_path = os.path.join(gcubed_root, temp_dir_name)
-
-        # Create new venv
+        # Create new venv only after validating the build tag
         print(f"Creating virtual environment for build {build_tag}...")
-        subprocess.run(["uv", "venv", "--system-site-packages", venv_name], cwd=gcubed_root, check=True)
-
-        # Remove temp directory if it already exists
-        if os.path.exists(temp_dir_path):
-            shutil.rmtree(temp_dir_path)
-
-        # Clone the repository with the specific build tag
-        print(f"Cloning prerequisites for build {build_tag}...")
-        clone_cmd = [
-            "git", "clone", "--depth", "1", "--single-branch",
-            "--branch", build_tag, repo_url, temp_dir_name,
-        ]
-        subprocess.run(clone_cmd, cwd=gcubed_root, check=True)
+        subprocess.run(
+            ["uv", "venv", "--system-site-packages", venv_name],
+            cwd=gcubed_root,
+            check=True,
+        )
 
         # Get Python interpreter path
         python_path = os.path.join(venv_path, "bin", "python")
@@ -144,24 +188,38 @@ def create_venv_for_build(build_tag):
         req_files = glob.glob(os.path.join(temp_dir_path, "requirements*.txt"))
 
         # Install wheel files and requirements files
-        install_packages(wheel_files, python_path, temp_dir_name, gcubed_root)
-        install_packages(req_files, python_path, temp_dir_name, gcubed_root, "-r")
+        if not install_packages(
+            wheel_files,
+            python_path,
+            get_venv_name(DEFAULT_TEMP_DIR_SUFFIX),
+            gcubed_root,
+        ):
+            raise RuntimeError(f"Failed to install wheel files for build {build_tag}")
 
-        # Clean up temporary directory
-        print("Cleaning up temporary files...")
-        shutil.rmtree(temp_dir_path)
+        if not install_packages(
+            req_files,
+            python_path,
+            get_venv_name(DEFAULT_TEMP_DIR_SUFFIX),
+            gcubed_root,
+            "-r",
+        ):
+            raise RuntimeError(f"Failed to install requirements for build {build_tag}")
 
         return True
 
-    except ConfigurationError as e:
-        print(str(e))
-        return False
-    except subprocess.CalledProcessError as e:
-        print(f"Error creating virtual environment: {e}")
-        return False
     except Exception as e:
-        print(f"Unexpected error in virtual environment creation: {e}")
+        print(f"Error creating virtual environment: {e}")
+        # If venv was created but installation failed, clean it up
+        if os.path.exists(venv_path):
+            print(f"Cleaning up failed virtual environment...")
+            shutil.rmtree(venv_path)
         return False
+    finally:
+        # Always clean up temp directory
+        print("Cleaning up temporary files...")
+        if os.path.exists(temp_dir_path):
+            shutil.rmtree(temp_dir_path)
+
 
 def prepare_local_venv(build_tag):
     """
