@@ -11,9 +11,17 @@ def install_packages(files, python_path, temp_dir_name, gcubed_root, config_para
         temp_dir_name (str): Name of the temporary directory
         gcubed_root (str): Root directory of the G-Cubed project
         config_param (str): Optional config parameter (e.g., '-r' for requirements files)
+
+    Returns:
+        bool: True if installation succeeded, False otherwise
     """
     if not files:
-        return
+        return True
+
+    # Verify Python interpreter exists
+    if not os.path.exists(python_path):
+        print(f"Error: Python interpreter not found at {python_path}")
+        return False
 
     file_type = "requirements" if config_param else "wheel"
     print(f"Installing {file_type} files...")
@@ -26,9 +34,18 @@ def install_packages(files, python_path, temp_dir_name, gcubed_root, config_para
         if config_param is not None:
             cmd.append(config_param)
 
-        cmd.extend([
-            "-p", python_path,
-            os.path.join(f"./{temp_dir_name}", file_name),
-        ])
+        cmd.extend(
+            [
+                "-p",
+                python_path,
+                os.path.join(f"./{temp_dir_name}", file_name),
+            ]
+        )
 
-        subprocess.run(cmd, cwd=gcubed_root, check=True)
+        try:
+            subprocess.run(cmd, cwd=gcubed_root, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error installing {file_name}: {e}")
+            return False
+
+    return True
