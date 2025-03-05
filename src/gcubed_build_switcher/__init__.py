@@ -10,8 +10,10 @@ by creating virtual environments specific to each G-Cubed Code library build.
 """
 
 import sys
-from .venv import prepare_local_venv
+from .venv import prepare_local_venv, get_venv_name
 from .vscode import set_vscode_python_interpreter
+from .config import is_feature_disabled
+from .messaging import display_warning
 
 
 def activate_or_build_and_activate_venv(build_tag):
@@ -24,9 +26,32 @@ def activate_or_build_and_activate_venv(build_tag):
     Returns:
         bool: True if successful, False otherwise
     """
+
+    # Check if build switching is disabled at the entry point
+    if is_feature_disabled("AUTO_BUILD_SWITCHER"):
+        display_warning(
+            "WARNING: Automatic G-Cubed Code build switching disabled. Skipping virtual environment activation."
+        )
+        return True
+
     # If local venv is up, then try to activate it via the custom vscode extension
     if prepare_local_venv(build_tag) is not False:
         result = set_vscode_python_interpreter(build_tag)
+        if result is False:
+            display_warning(
+                [
+                    "WARNING: Failed to set Python interpreter in VSCode. Please contact G-Cubed support.",
+                    "",
+                    "NOTE:==>        The virtual environment should still be available in VS Code.        <==",
+                    "     ==> If you do not manually activate it then your models will not run correctly. <==",
+                    "",
+                    "To enable the virtual environment manually:",
+                    "  * select the command palette ([CTRL/CMD]+[SHIFT]+[P]),",
+                    "  * search for 'Python: Select Interpreter'",
+                    f"  * and select the environment '{get_venv_name(build_tag)}'.",
+                ],
+                alignment="left"
+            )
         return result
     # No venv
     return False
