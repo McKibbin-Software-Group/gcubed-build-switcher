@@ -31,7 +31,9 @@
     },
     "9876": {
       "label": "G-Cubed venv helper",
-      "onAutoForward": "ignore"
+      "onAutoForward": "ignore",
+      "visibility": "private",
+      "autoForwardPortsSource": "none"
     }
   },
   "features": {},
