@@ -273,6 +273,7 @@ def prepare_local_venv(build_tag):
         return False
 
 
+
 def set_vscode_python_interpreter(build_tag):
     """Tell VSCode extension to use the specified interpreter."""
     venv_name = get_venv_name(build_tag)
@@ -302,7 +303,8 @@ def set_vscode_python_interpreter(build_tag):
 def activate_or_build_and_activate_venv(build_tag):
     # if local venv is up, then try to activate it via the custom vscode extension
     if prepare_local_venv(build_tag) is not False:
-        return set_vscode_python_interpreter(build_tag)
+        result = set_vscode_python_interpreter(build_tag)
+        return result
     # no venv
     return False
 
@@ -332,4 +334,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    message = ["Hello there!", "This is a test message.", "Goodbye!"]
+    styled_message = format_styled_message(message, fg_color="yellow", bg_color="red", border_width=3, padding=3)
+    print(styled_message)
+
+

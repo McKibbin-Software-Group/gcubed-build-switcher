@@ -24,6 +24,9 @@ dependencies = [
   "requests"
 ]
 
+[project.scripts]
+gcubed-switch = "gcubed_build_switcher.cli:main"
+
 [project.urls]
 "Homepage" = "https://github.com/McKibbin-Software-Group/gcubed-build-switcher"
 "Repository" = "https://github.com/McKibbin-Software-Group/gcubed-build-switcher.git"

@@ -26,7 +26,7 @@
   },
   "portsAttributes": {
     "8888": {
-      "label": "gCubed Chart",
+      "label": "G-Cubed Online Charts",
       "onAutoForward": "openBrowser"
     },
     "9876": {
@@ -117,7 +117,10 @@
         },
         "[python]": {
           "editor.defaultFormatter": "ms-python.black-formatter",
-          "files.trimTrailingWhitespace": true
+          "files.trimTrailingWhitespace": true,
+          "files.insertFinalNewline": true,
+          "editor.rulers": [80, 120],
+          "editor.tabSize": 2
         },
         // Don't show in vscode explorer. Files are still accessible via terminal, eg: 'code .devcontainer/devcontainer.json'
         "files.exclude": {
