@@ -1,6 +1,6 @@
 import os
 import requests
-from .venv import get_venv_name
+from .venv import get_venv_name, get_venv_directory_for_build
 
 def set_vscode_python_interpreter(build_tag):
     """
@@ -13,7 +13,8 @@ def set_vscode_python_interpreter(build_tag):
         bool: True if successful, False otherwise
     """
     venv_name = get_venv_name(build_tag)
-    python_path = os.path.join(".", venv_name, "bin", "python")
+    full_path = get_venv_directory_for_build(venv_name)
+    python_path = os.path.join(full_path, "bin", "python")
 
     print(f"Trying to switch python interpreter to: {python_path}")
 
