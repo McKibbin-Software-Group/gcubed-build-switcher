@@ -7,6 +7,8 @@ COPY .devcontainer/extensions/vscode-interpreter-switcher-0.1.0.vsix /home/vscod
 
 ARG NODE_VERSION="none"
 ENV NODE_VERSION=${NODE_VERSION}
+
+ARG TZ
 ENV TZ="Australia/Sydney"
 
 # Install uv and node if a version is specified. Note, we're pinning a version

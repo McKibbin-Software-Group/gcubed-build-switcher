@@ -42,9 +42,19 @@
       "extensions": [
         // Ignore linter errors for the local vsix file - schema file simply does not include this pattern
         "/home/vscode/extensions/vscode-interpreter-switcher-0.1.0.vsix",
-        "ms-python.python",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "GitHub.remotehub",
+        "GitHub.vscode-pull-request-github",
+        "gruntfuggly.todo-tree",
+        "mechatroner.rainbow-csv",
+        "mhutchie.git-graph",
         "ms-python.black-formatter",
+        "ms-python.python",
         "ms-vsliveshare.vsliveshare",
+        "tamasfe.even-better-toml"
         // The following are not required inside the devcontainer. Don't install them.
         // "ms-vscode-remote.vscode-remote-extensionpack",
         // "ms-vscode-remote.remote-ssh-explorer",
@@ -54,31 +64,8 @@
         // "ms-vscode.remote-ssh-edit",
         // Speech runs on the local machine, not in the container.
         // "ms-vscode.vscode-speech",
-        "GitHub.remotehub",
-        "GitHub.copilot",
-        "GitHub.copilot-chat",
-        "GitHub.copilot",
-        "GitHub.vscode-pull-request-github",
-        "mhutchie.git-graph",
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "gruntfuggly.todo-tree",
-        "mechatroner.rainbow-csv",
-        "tamasfe.even-better-toml"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "python.linting.enabled": true,
-        "python.linting.pylintEnabled": true,
-        "python.formatting.provider": "black",
-        "python.formatting.blackPath": "/usr/local/py-utils/bin/black",
-        "python.linting.banditPath": "/usr/local/py-utils/bin/bandit",
-        "python.linting.flake8Path": "/usr/local/py-utils/bin/flake8",
-        "python.linting.mypyPath": "/usr/local/py-utils/bin/mypy",
-        "python.linting.pycodestylePath": "/usr/local/py-utils/bin/pycodestyle",
-        "python.linting.pydocstylePath": "/usr/local/py-utils/bin/pydocstyle",
-        "python.linting.pylintPath": "/usr/local/py-utils/bin/pylint",
-
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.detectIndentation": false,
         "editor.formatOnPaste": true,
@@ -96,6 +83,21 @@
         "editor.wordWrap": "off",
 
         "files.eol": "\n",
+
+        "git.autofetch": true,
+
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.formatting.provider": "black",
+        "python.formatting.blackPath": "/usr/local/py-utils/bin/black",
+        "python.linting.banditPath": "/usr/local/py-utils/bin/bandit",
+        "python.linting.flake8Path": "/usr/local/py-utils/bin/flake8",
+        "python.linting.mypyPath": "/usr/local/py-utils/bin/mypy",
+        "python.linting.pycodestylePath": "/usr/local/py-utils/bin/pycodestyle",
+        "python.linting.pydocstylePath": "/usr/local/py-utils/bin/pydocstyle",
+        "python.linting.pylintPath": "/usr/local/py-utils/bin/pylint",
+
         "terminal.integrated.inheritEnv": true,
         "terminal.integrated.cwd": "${workspaceFolder}",
         "telemetry.telemetryLevel": "off",
@@ -145,6 +147,5 @@
   // Install any base prerequisites. Note - uv will install anything in requirements.txt to the system context. Assuming
   // this is needed in all cases.  Otherwise you should install requirements into the appropriate venv.
   // "postCreateCommand": "npm install && if [ -f requirements.txt ]; then sudo uv pip install --system -r requirements.txt; fi"
-  "postCreateCommand": "if [ -f requirements.txt ]; then sudo $(which uv) pip install --system -r requirements.txt; fi; if [ -f pyproject.toml ]; then sudo $(which uv) pip install --system -r pyproject.toml; fi;"
-
+  "postCreateCommand": "if [ -f requirements.txt ]; then sudo $(which uv) pip install --system -r requirements.txt; fi; if [ -f pyproject.toml ]; then sudo $(which uv) pip install --system -r pyproject.toml; fi;echo 'alias ll=\"ls -alh\"' >> ~/.bashrc; echo 'cd() { if [ \"$#\" -eq 0 ]; then command cd \"${containerWorkspaceFolder}\"; else command cd \"$@\"; fi; }' >> ~/.bashrc"
 }
