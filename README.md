@@ -10,10 +10,10 @@ If a required build is not available in a local virtual environment then this wi
 
 This repo consists of two components:
 1. A Python virtual environment manager & virtual environment change requestor
-2. A JavaScript VS Code extension which listens for virtual environment change requests and then, using the VS Code internal API, changes to the requested Python virtual environment
+1. A JavaScript VS Code extension which listens for virtual environment change requests and then, using the VS Code internal API, changes to the requested Python virtual environment
 
 
-## Usage
+## Installation
  1. Add the following to the `devcontainer.json` root of the repository requiring this capability:
 
     ```json
@@ -21,7 +21,7 @@ This repo consists of two components:
       // ensure that uv copies dependencies into the venvs - as otherwise venvs are linked from cache
       // which disappears when the container is rebuilt.
       "UV_LINK_MODE": "copy",
-      "GCUBED_ROOT": "${containerWorkspaceFolder}",
+      "GCUBED_ROOT": "${containerWorkspaceFolder}{{USER_DATA_SUBDIRECTORY}}",
       "GCUBED_PYTHON_PREREQUISITES_REPO": "https://github.com/McKibbin-Software-Group/python-gcubed-prerequisites",
       "GCUBED_CODE_PACKAGE_NAME=gcubed": "gcubed"
     },
@@ -34,31 +34,33 @@ This repo consists of two components:
 
  3. Include `venv_gcubed*` in the container's `.gitignore`
 
- 4. Inject a dependency on this repo into the target container's root `pyproject.toml`:
+ 4. The following TOML file is separately attached to the release so that the `gcubed-setup.sh` script or similar method can install the file and use a tool such as 'uv' to install the dependency into global (--system) space:
 
  ```toml
- [project]
+[project]
+name = "G-Cubed_Economic_Modelling"
+version = "1.0.0"
 dependencies = [
-    { git = "https://github.com/McKibbin-Software-Group/gcubed-build-switcher", branch = "main" }
+    "gcubed-build-switcher @ git+https://github.com/McKibbin-Software-Group/gcubed-build-switcher@main"
 ]
+
 ```
 
-Assuming that the target project is running `uv` on container start (defined in that container's `devcontainer.json`) then uv will automatically install/update this project's module into the Python global context. The `devcontainer.json` should include something like the following:
+If using `uv` to install the dependency then the command would be something like:
 
-  ```json
-  "postStartCommand ": "sudo uv pip install --system -r pyproject.toml"
-  ```
+```
+sudo $(which uv) pip install --system -r pyproject.toml
+```
 
  5. At the beginning of a simulation script import the `activate_or_build_and_activate_venv` function from this module and pass it a G-Cubed Code build tag which corresponds with a tag in the G-Cubed Code repo.  If that completes successfully then continue as normal with your script.
 
 
-## Testing
-
+## Usage
+A CLI tool is provided in the target environment:
 ```bash
-python -m src.gcubed_build_switcher.cli adb_0001
+gcubed-switch [build_tag]
 ```
-
-## End-user python script example
+### End-user python script example
 A simple python script which invokes this module & requests a venv switch. Takes the gcubed code build tag from command-line or defaults to a preset version.
 
 ```Python
@@ -73,3 +75,12 @@ result = gcubed_build_switcher.activate_or_build_and_activate_venv(gcubed_code_b
 print(f"Result: {"It Verked!!" if result is True else "Oh noes!"}")
 
 ```
+
+
+
+## Testing
+If testing locally in the dev environment:
+```bash
+python -m src.gcubed_build_switcher.cli [build_tag]
+```
+

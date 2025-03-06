@@ -1,3 +1,3 @@
 # NOTE
 
-The `gcubed-customer-template` need to have this TOML installed in its workspace root.
+TOML file to install this module as a dependency.

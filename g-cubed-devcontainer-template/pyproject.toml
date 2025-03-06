@@ -1,4 +1,6 @@
 [project]
+name = "G-Cubed_Economic_Modelling"
+version = "1.0.0"
 dependencies = [
-    { git = "https://github.com/McKibbin-Software-Group/gcubed-build-switcher", branch = "main" }
+    "gcubed-build-switcher @ git+https://github.com/McKibbin-Software-Group/gcubed-build-switcher@main"
 ]
