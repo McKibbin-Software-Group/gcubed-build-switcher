@@ -1,0 +1,4 @@
+[project]
+dependencies = [
+    { git = "https://github.com/McKibbin-Software-Group/gcubed-build-switcher", branch = "main" }
+]
