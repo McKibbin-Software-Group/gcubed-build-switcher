@@ -38,7 +38,7 @@ async function activate(context) {
   }
 
   // Just in case, make sure the python extension is running
-  const pythonExtension = await getPythonExtensionWithRetry({ maxRetries: 10, delayMs: 3000 })
+  const pythonExtension = await getPythonExtensionWithRetry({ maxRetries: 40, delayMs: 3000 })
   if (!pythonExtension) {
     vscode.window.showErrorMessage(
       "Python extension not found after multiple attempts. Please ensure it's installed and reload the window."
