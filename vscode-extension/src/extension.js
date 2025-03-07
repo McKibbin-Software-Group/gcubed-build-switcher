@@ -103,7 +103,7 @@ function handleSetInterpreterRequest(req, res) {
       }
 
       // Step 2: Extract and validate pythonPath parameter
-      const { pythonPath: requestedPythonPath, shortVenvName: shortName } = parsedBody
+      const { pythonPath: requestedPythonPath, shortName: shortVenvName } = parsedBody
       if (!isValidPathString(requestedPythonPath)) {
         console.error("Invalid request: pythonPath must be a non-empty string")
         sendJsonResponse(res, HTTP_BAD_REQUEST, {
