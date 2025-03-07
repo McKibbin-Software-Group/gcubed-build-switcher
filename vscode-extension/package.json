@@ -25,9 +25,6 @@
     "Other"
   ],
   "main": "./dist/extension.js",
-  "extensionDependencies": [
-    "ms-python.python"
-  ],
   "activationEvents": [
     "onExtension:ms-python.python"
   ],
