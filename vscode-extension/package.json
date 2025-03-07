@@ -1,31 +1,62 @@
 {
   "name": "gcubed-venv-switcher",
-  "displayName": "G-Cubed Code Build Switcher",
-  "version": "0.1.0",
-  "publisher": "gcubed",
+  "displayName": "G-Cubed VS Code Python venv switcher",
+  "version": "0.1.37",
+  "publisher": "mckibbin-software-group",
   "repository": "none",
-  "description": "Switch VS Code Python interpreter venvs via HTTP requests",
+  "description": "Switches VS Code Python interpreter venvs via local HTTP requests",
+  "keywords": [
+    "python",
+    "venv",
+    "interpreter",
+    "switcher",
+    "virtual environments",
+    "programming",
+    "data science"
+  ],
+  "icon": "images/cute_baby_snake_jack_in_a_box_256_x_256.png",
   "engines": {
     "vscode": "^1.60.0"
   },
   "categories": [
+    "Programming Languages",
+    "Language Packs",
+    "Data Science",
     "Other"
-  ],
-  "activationEvents": [
-    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "extensionDependencies": [
     "ms-python.python"
   ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "Network Configuration",
+      "properties": {
+        "gcubedVenvSwitcher.localPort": {
+          "type": "number",
+          "default": 9876,
+          "description": "Local port number for the HTTP server. NOTE: If using a devcontainer, add/modify your devcontainer.json (adjusting the port number appropriately) so that this port isn't shared externally: \n\"portsAttributes\": {\n  \"9876\": {\n    \"label\": \"G-Cubed venv helper\",\n    \"onAutoForward\": \"ignore\",\n    \"visibility\": \"private\"\n  }\n}"
+        },
+        "gcubedVenvSwitcher.hostIP": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "description": "Host IP address for the HTTP server"
+        }
+      }
+    }
+  },
   "dependencies": {
     "@types/vscode": "^1.97.0",
     "@vscode/python-extension": "^1.0.5"
   },
   "files": [
-    "LICENSE**",
+    "LICENSE*",
     "package.json",
-    "dist/**"
+    "dist/**",
+    "images/**"
   ],
   "devDependencies": {
     "@vscode/vsce": "^3.2.2",
