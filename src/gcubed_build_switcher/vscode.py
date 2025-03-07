@@ -21,7 +21,7 @@ def set_vscode_python_interpreter(build_tag):
     try:
         response = requests.post(
             "http://127.0.0.1:9876/set-interpreter",
-            json={"pythonPath": python_path},
+            json={"pythonPath": python_path, "shortName": venv_name},
             timeout=3,
         )
         if response.status_code == 200:
