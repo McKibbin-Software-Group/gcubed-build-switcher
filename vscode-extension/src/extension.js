@@ -18,9 +18,18 @@ const HTTP_NOT_FOUND = 404
 const HTTP_UNPROCESSABLE_ENTITY = 422
 const HTTP_SERVER_ERROR = 500
 
+// Diagnostic
+const EXTENSION_LOAD_TIME = Date.now()
+console.log("G-Cubed venv switcher extension loaded at:", new Date().toISOString())
+
+// Needs to be in global context as shared between activate & deactivate
 let server
 
 async function activate(context) {
+  const activationTime = Date.now()
+  const loadToActivateTime = activationTime - EXTENSION_LOAD_TIME
+  console.log(`G-Cubed venv switcher extension activated (took ${loadToActivateTime}ms since load)`)
+
   if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
     const msg = "No workspace folder open"
     console.error(msg)
@@ -29,7 +38,7 @@ async function activate(context) {
   }
 
   // Just in case, make sure the python extension is running
-  const pythonExtension = await getPythonExtensionWithRetry({ maxRetries: 5, delayMs: 3000 })
+  const pythonExtension = await getPythonExtensionWithRetry({ maxRetries: 10, delayMs: 3000 })
   if (!pythonExtension) {
     vscode.window.showErrorMessage(
       "Python extension not found after multiple attempts. Please ensure it's installed and reload the window."
@@ -64,7 +73,7 @@ async function activate(context) {
   })
 
   // start the server listening on configured address/port with fallback defaults
-  const { localPort = 9876, hostIP = "127.0.0.1" } = getExtensionConfiguration();
+  const { localPort = 9876, hostIP = "127.0.0.1" } = getExtensionConfiguration()
   server.listen(localPort, hostIP, () => {
     console.log(`Interpreter switcher server listening on ${hostIP}:${localPort}`)
   })
@@ -74,7 +83,6 @@ async function activate(context) {
   const activationMessage = "G-Cubed venv switcher extension activated"
   console.log(`${activationMessage} on ${hostIP}:${localPort}`)
   window.showInformationMessage(activationMessage)
-
 }
 
 // Main request handler for the /set-interpreter endpoint
@@ -95,7 +103,7 @@ function handleSetInterpreterRequest(req, res) {
       }
 
       // Step 2: Extract and validate pythonPath parameter
-      const { pythonPath: requestedPythonPath, shortVenvName: shortName} = parsedBody
+      const { pythonPath: requestedPythonPath, shortVenvName: shortName } = parsedBody
       if (!isValidPathString(requestedPythonPath)) {
         console.error("Invalid request: pythonPath must be a non-empty string")
         sendJsonResponse(res, HTTP_BAD_REQUEST, {
@@ -201,7 +209,7 @@ function formatEnvironmentsAsList(environments) {
 }
 
 async function switchPythonEnvironment(pythonApi, absolutePath, requestedPath, shortVenvName) {
-  const message = `Switching venv to: '${ shortVenvName || requestedPath}'`
+  const message = `Switching venv to: '${shortVenvName || requestedPath}'`
   console.log(message)
   window.showInformationMessage(message)
   return await pythonApi.environments.updateActiveEnvironmentPath(absolutePath)
@@ -267,11 +275,11 @@ async function getPythonExtensionWithRetry({ maxRetries = 5, delayMs = 3000 } = 
  * @returns {Object} Configuration values
  */
 function getExtensionConfiguration() {
-  const config = workspace.getConfiguration('gcubedVenvSwitcher');
+  const config = workspace.getConfiguration("gcubedVenvSwitcher")
   return {
-    localPort: config.get('localPort'),
-    hostIP: config.get('hostIP')
-  };
+    localPort: config.get("localPort"),
+    hostIP: config.get("hostIP"),
+  }
 }
 
 function deactivate() {
