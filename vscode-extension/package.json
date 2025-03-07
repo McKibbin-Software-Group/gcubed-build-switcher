@@ -29,7 +29,7 @@
     "ms-python.python"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onExtension:ms-python.python"
   ],
   "contributes": {
     "configuration": {
@@ -56,7 +56,7 @@
     "LICENSE*",
     "package.json",
     "dist/**",
-    "images/**"
+    "images/cute_baby_snake_jack_in_a_box_256_x_256.png"
   ],
   "devDependencies": {
     "@vscode/vsce": "^3.2.2",
