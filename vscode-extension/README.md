@@ -1,88 +1,52 @@
-# G-Cubed VSCode python venv switcher
+# G-Cubed VS Code Python Environment Switcher
 
-This project is used by the Python project in this repo.
+## Overview
+This extension works in tandem with the G-Cubed Python Virtual Environment Manager to automatically handle Python environment switching for G-Cubed economic modeling projects. It ensures the correct G-Cubed Code library build is active for both editing and execution of economic models.
 
-***Start in a devcontainer***
+## Key Features
+- Automatically responds to virtual environment change requests from G-Cubed scripts
+- Seamlessly switches VS Code's Python interpreter to the requested environment
+- Supports both absolute and relative Python interpreter paths
+- Integrates with the G-Cubed build system to ensure consistent development environments
 
-Don't forget to `npm install` to ensure your environment has that new-car smell.
+## How It Works
+When a G-Cubed economic model script runs, it can request a specific G-Cubed Code build version. The Python component of this system will:
+1. Check if the requested build's virtual environment exists
+2. Create and set up the environment if necessary
+3. Send a request to this VS Code extension to activate the appropriate Python interpreter
 
-## Building
-Build, package, and deploy.
+This ensures that the correct dependencies are available for both code completion/linting and runtime execution.
 
-### Test
-Unminified for testing for easier debugging.
-``` bash
-npm run package:test
-code --install-extension test/vscode-interpreter-switcher-test.vsix
-ctrl-shift-p - Developer: reload window
-```
+## Requirements
+- VS Code with Python extension
+- G-Cubed Python virtual environment manager component installed
+- Properly configured `devcontainer.json` with required environment variables
 
-### Prod:
-Produces a minified & version-named package.
-``` bash
-npm run package:production
-code --install-extension production/vscode-interpreter-switcher-0.1.0.vsix
-ctrl-shift-p - Developer: reload window
-```
-
-Once satisfied copy the .vsix file to the target devcontainer.
-
-## Installation
-TODO
-
-**Important** - target devcontainer must have the following port setups:
-``` JSON
+## Configuration
+Ensure your `devcontainer.json` includes required port configuration:
+```json
 "portsAttributes": {
-    // auto-forward charting page to local web browser.
     "8888": {
       "label": "G-Cubed Chart",
       "onAutoForward": "openBrowser"
     },
-    // Internal use only. Do not expose the helper outside the devcontainer.
     "9876": {
       "label": "G-Cubed venv helper",
       "onAutoForward": "ignore"
     }
+}
 ```
 
-## Testing
+## Usage
+The extension operates automatically in the background. To trigger a build/environment switch from a Python script:
 
-### Test 1: Valid request with absolute path - gcubed
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{"pythonPath": "/workspaces/test-new-gcubed-2R/venv_gcubed_c_0002/bin/python"}'
+```python
+import gcubed_build_switcher
+
+# Activate a specific G-Cubed Code build
+gcubed_build_switcher.activate_or_build_and_activate_venv("c_0002")
 ```
 
-### Test 2: Valid request with relative path (will be resolved relative to workspace) - gcubed
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{"pythonPath": "venv_gcubed_c_0002/bin/python"}'
-```
-
-#### Test 2a: Valid request relative path back to global /usr/local/bin/python
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{"pythonPath": "/usr/local/bin/python"}'
-```
-
-### Test 3: Valid request with invalid path
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{"pythonPath": "bad path"}'
-```
-
-### Test 4: Invalid request - missing pythonPath parameter
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{}'
-```
-
-### Test 5: Invalid request - empty pythonPath
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{"pythonPath": ""}'
-```
-
-### Test 6: Invalid request - pythonPath is not a string
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{"pythonPath": 12345}'
-```
-
-### Test 7: Invalid endpoint
-``` bash
-curl -X GET http://127.0.0.1:9876/wrong-endpoint
-```
+Alternatively, use the CLI tool:
+```bash
+gcubed-switch c_0002
