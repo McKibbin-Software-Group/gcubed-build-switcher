@@ -95,7 +95,7 @@ function handleSetInterpreterRequest(req, res) {
       }
 
       // Step 2: Extract and validate pythonPath parameter
-      const { pythonPath: requestedPythonPath } = parsedBody
+      const { pythonPath: requestedPythonPath, shortVenvName: shortName} = parsedBody
       if (!isValidPathString(requestedPythonPath)) {
         console.error("Invalid request: pythonPath must be a non-empty string")
         sendJsonResponse(res, HTTP_BAD_REQUEST, {
@@ -146,7 +146,7 @@ function handleSetInterpreterRequest(req, res) {
         }
 
         // Step 6: Switch Python environment
-        await switchPythonEnvironment(pythonApi, absolutePythonPath, requestedPythonPath)
+        await switchPythonEnvironment(pythonApi, absolutePythonPath, requestedPythonPath, shortVenvName)
 
         await pythonApi.environments.refreshEnvironments({ forceRefresh: true })
         knownEnvironments = pythonApi.environments.known
@@ -200,8 +200,8 @@ function formatEnvironmentsAsList(environments) {
     .join("\n")
 }
 
-async function switchPythonEnvironment(pythonApi, absolutePath, requestedPath) {
-  const message = `Switching venv to: '${requestedPath}'`
+async function switchPythonEnvironment(pythonApi, absolutePath, requestedPath, shortVenvName) {
+  const message = `Switching venv to: '${ shortVenvName || requestedPath}'`
   console.log(message)
   window.showInformationMessage(message)
   return await pythonApi.environments.updateActiveEnvironmentPath(absolutePath)
