@@ -10,10 +10,6 @@ const { window, workspace } = vscode
 const { resolve } = path
 const { PythonExtension } = pythonExt
 
-// TODO: make this configurable
-const localPort = 9876
-const hostIP = "127.0.0.1"
-
 // HTTP constants
 const CONTENT_TYPE_JSON = "application/json"
 const HTTP_OK = 200
@@ -32,10 +28,23 @@ async function activate(context) {
     return
   }
 
-  const activationMessage = "G-Cubed venv switcher extension activated"
-  console.log(`${activationMessage} on ${hostIP}:${localPort}`)
-  window.showInformationMessage(activationMessage)
+  // Just in case, make sure the python extension is running
+  const pythonExtension = await getPythonExtensionWithRetry({ maxRetries: 5, delayMs: 3000 })
+  if (!pythonExtension) {
+    vscode.window.showErrorMessage(
+      "Python extension not found after multiple attempts. Please ensure it's installed and reload the window."
+    )
+    return
+  }
+  if (!pythonExtension.isActive) {
+    console.log("Waiting for Python extension to activate...")
+    await pythonExtension.activate()
+    console.log("Python extension activated")
+  }
 
+  console.log("Starting server...")
+
+  // create server to serve requests on the API port and route
   server = createServer(async (req, res) => {
     if (req.method === "POST" && req.url === "/set-interpreter") {
       handleSetInterpreterRequest(req, res)
@@ -48,16 +57,24 @@ async function activate(context) {
     }
   })
 
+  // Subscribe to error events & report them
   server.on("error", (err) => {
     console.error("Server error:", err)
     window.showErrorMessage(`Server error: ${err.message}`)
   })
 
+  // start the server listening on configured address/port with fallback defaults
+  const { localPort = 9876, hostIP = "127.0.0.1" } = getExtensionConfiguration();
   server.listen(localPort, hostIP, () => {
     console.log(`Interpreter switcher server listening on ${hostIP}:${localPort}`)
   })
 
   context.subscriptions.push({ dispose: () => server.close() })
+
+  const activationMessage = "G-Cubed venv switcher extension activated"
+  console.log(`${activationMessage} on ${hostIP}:${localPort}`)
+  window.showInformationMessage(activationMessage)
+
 }
 
 // Main request handler for the /set-interpreter endpoint
@@ -220,7 +237,41 @@ function sendJsonResponse(res, statusCode, data) {
  * @returns {Promise<void>} Promise that resolves after the specified delay
  */
 function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Attempts to get the Python extension with multiple retries
+ * @param {Object} options - Options for retry attempts
+ * @param {number} options.maxRetries - Maximum number of retry attempts
+ * @param {number} options.delayMs - Delay between retries in milliseconds
+ * @returns {Promise<any>} - The Python extension or null if not found after retries
+ */
+async function getPythonExtensionWithRetry({ maxRetries = 5, delayMs = 3000 } = {}) {
+  let retryCount = 0
+  let pythonExtension = vscode.extensions.getExtension("ms-python.python")
+  console.log("Got Python extension: ", pythonExtension)
+
+  while (!pythonExtension && retryCount < maxRetries) {
+    console.log(`Python extension not found, retrying (${retryCount + 1}/${maxRetries})...`)
+    await delay(delayMs)
+    pythonExtension = vscode.extensions.getExtension("ms-python.python")
+    retryCount++
+  }
+
+  return pythonExtension
+}
+
+/**
+ * Gets extension configuration with defaults
+ * @returns {Object} Configuration values
+ */
+function getExtensionConfiguration() {
+  const config = workspace.getConfiguration('gcubedVenvSwitcher');
+  return {
+    localPort: config.get('localPort'),
+    hostIP: config.get('hostIP')
+  };
 }
 
 function deactivate() {
