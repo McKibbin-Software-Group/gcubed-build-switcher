@@ -153,7 +153,7 @@ function handleSetInterpreterRequest(req, res) {
         })
         knownEnvironments = pythonApi.environments.known
 
-        console.info("Known environments after switching:")
+        console.info("Known environments after switching & forced refresh:")
         console.info(formatEnvironmentsAsList(knownEnvironments))
 
         sendJsonResponse(res, HTTP_OK, {
