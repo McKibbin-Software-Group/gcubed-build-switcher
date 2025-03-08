@@ -1,6 +1,13 @@
 import os
 import requests
 from .venv import get_venv_name, get_venv_directory_for_build
+from .config import (
+    VSCODE_VENV_SWITCHER_HOST,
+    VSCODE_VENV_SWITCHER_PORT,
+    VSCODE_VENV_SWITCHER_API_ROUTE,
+    VSCODE_VENV_SWITCHER_API_TIMEOUT_SECONDS,
+)
+
 
 def set_vscode_python_interpreter(build_tag):
     """
@@ -20,9 +27,9 @@ def set_vscode_python_interpreter(build_tag):
 
     try:
         response = requests.post(
-            "http://127.0.0.1:9876/set-interpreter",
+            f"http://{VSCODE_VENV_SWITCHER_HOST}:{VSCODE_VENV_SWITCHER_PORT}/{VSCODE_VENV_SWITCHER_API_ROUTE}",
             json={"pythonPath": python_path, "shortName": venv_name},
-            timeout=3,
+            timeout=VSCODE_VENV_SWITCHER_API_TIMEOUT_SECONDS,
         )
         if response.status_code == 200:
             print(f"VSCode Python interpreter set to: {python_path}")

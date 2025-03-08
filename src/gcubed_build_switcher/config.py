@@ -4,6 +4,10 @@ import sys
 # Constants
 VENV_NAME_PREFIX = "venv_gcubed_"
 DEFAULT_TEMP_DIR_SUFFIX = "temp"
+VSCODE_VENV_SWITCHER_HOST = "127.0.0.1"
+VSCODE_VENV_SWITCHER_PORT = 9876
+VSCODE_VENV_SWITCHER_API_ROUTE = "set-interpreter"
+VSCODE_VENV_SWITCHER_API_TIMEOUT_SECONDS = 5
 
 class ConfigurationError(Exception):
     """Exception raised for configuration errors."""
