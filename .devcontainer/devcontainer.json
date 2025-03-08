@@ -41,7 +41,8 @@
     "vscode": {
       "extensions": [
         // Ignore linter errors for the local vsix file - schema file simply does not include this pattern
-        "/home/vscode/extensions/vscode-interpreter-switcher-0.1.0.vsix",
+        // For the dev environment, just use `code --install-extension <name>` to get it going
+        // "/home/vscode/extensions/vscode-interpreter-switcher-0.1.0.vsix",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
         "GitHub.copilot",

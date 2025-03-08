@@ -1,10 +1,6 @@
 ARG VARIANT=1-3.12
 FROM mcr.microsoft.com/devcontainers/python:${VARIANT}
 
-# Copy the vscode-interpreter-switcher-0.1.0.vsix file into the container
-# Putting into /home/vscode/extensions/ so that it can be auto-found by vscode
-COPY .devcontainer/extensions/vscode-interpreter-switcher-0.1.0.vsix /home/vscode/extensions/
-
 ARG NODE_VERSION="none"
 ENV NODE_VERSION=${NODE_VERSION}
 
