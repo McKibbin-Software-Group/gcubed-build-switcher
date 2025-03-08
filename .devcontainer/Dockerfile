@@ -14,7 +14,6 @@ ENV TZ="Australia/Sydney"
 RUN set -eux; \
     export DEBIAN_FRONTEND=noninteractive; \
     apt-get update; \
-    apt-get -y upgrade; \
     apt-get -y install --no-install-recommends \
         tzdata curl ca-certificates; \
     apt-get autoremove -y; \
