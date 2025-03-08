@@ -54,7 +54,7 @@ When setting up a devcontainer that will use this facility:
         "vscode": {
           "extensions": [
             // Ignore linter errors for the local vsix file - schema file simply does not include this pattern
-            // "/home/vscode/extensions/vscode-interpreter-switcher-0.1.0.vsix",
+            "/home/vscode/extensions/gcubed-venv-switcher/gcubed-vscode-venv-switcher.vsix",
             ...rest of your extensions definition
           ]
         }
