@@ -105,8 +105,9 @@ function handleSetInterpreterRequest(req, res) {
       console.info(`Received request for interpreter: ${requestedPythonPath}, will set to: ${absolutePythonPath}`)
 
       try {
-        // Step 4: Get Python environments and validate path
-        checkForAndAttemptActivatePythonExtension({ maxRetries: 20, delayMs: 3000 })
+        // Step 4: Get Python environments and validate path. Throws exception within
+        // about 1.5s if Python extension isn't available or can't be (re)activated
+        await checkForAndAttemptActivatePythonExtension({ maxRetries: 3, delayMs: 500 })
         const pythonApi = await PythonExtension.api()
 
         // Force a refresh of the environments
@@ -208,7 +209,7 @@ async function switchPythonEnvironment(pythonApi, absolutePath, requestedPath, s
 function handlePythonApiError(err, res) {
   console.error("Error using Python API:", err)
 
-  const errorMessage = `Failed to get Python interpreter: ${err.message || String(err)}`
+  const errorMessage = `Failed to get Python interpreter. Check that the MS Python extension is loaded, enabled, and activated. Error from API: ${err.message || String(err)}`
   window.showErrorMessage(errorMessage)
   sendJsonResponse(res, HTTP_SERVER_ERROR, {
     success: false,
