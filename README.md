@@ -72,12 +72,11 @@ When setting up a devcontainer that will use this facility:
 
  ```toml
 [project]
-name = "G-Cubed_Economic_Modelling"
+name = "G-Cubed_Build_Switcher"
 version = "1.0.0"
 dependencies = [
     "gcubed-build-switcher @ git+https://github.com/McKibbin-Software-Group/gcubed-build-switcher@main"
 ]
-
 ```
 
 If using `uv` to install the dependency then the command would be something like:
