@@ -1,7 +1,7 @@
 {
   "name": "gcubed-venv-switcher",
   "displayName": "G-Cubed VS Code Python venv switcher",
-  "version": "0.2.19",
+  "version": "0.2.20",
   "publisher": "mckibbin-software-group",
   "repository": "none",
   "description": "Switches VS Code Python interpreter venvs via local HTTP requests",
