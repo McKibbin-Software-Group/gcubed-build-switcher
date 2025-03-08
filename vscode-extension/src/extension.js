@@ -111,6 +111,7 @@ function handleSetInterpreterRequest(req, res) {
         const pythonApi = await PythonExtension.api()
 
         // Force a refresh of the environments
+        console.info("Forcing refresh of Python Environments...")
         await pythonApi.environments.refreshEnvironments({ forceRefresh: true })
         let knownEnvironments = pythonApi.environments.known
 
@@ -120,7 +121,7 @@ function handleSetInterpreterRequest(req, res) {
         // Step 5: Check if path exists in known environments. Retry if not
         if (!isPathInKnownEnvironments(absolutePythonPath, knownEnvironments)) {
           // give it a second to catch up
-          console.warn(`Path not found in known environments, retrying after 1s: ${absolutePythonPath}`)
+          console.warn(`Path not found in known environments, forcing refresh & retrying after 1s: ${absolutePythonPath}`)
           await delay(1000)
           await pythonApi.environments.refreshEnvironments({ forceRefresh: true })
           knownEnvironments = pythonApi.environments.known
@@ -143,8 +144,10 @@ function handleSetInterpreterRequest(req, res) {
         }
 
         // Step 6: Switch Python environment
+        console.info("Switching environments...")
         await switchPythonEnvironment(pythonApi, absolutePythonPath, requestedPythonPath, shortVenvName)
 
+        console.info("Forcing refresh...")
         await pythonApi.environments.refreshEnvironments({
           forceRefresh: true,
         })
