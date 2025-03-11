@@ -7,7 +7,7 @@ const NULL_BYTE = 0
  * Must match the path used by the server
  * @constant {string}
  */
-const SERVER_SOCKET_PATH = "/tmp/gcubed_venv_switcher.sock"
+const SERVER_SOCKET_PATH = "/tmp/gcubed-venv-switcher.sock"
 
 /**
  * Sends a test message to the server and processes the response
@@ -72,7 +72,7 @@ function sendTestMessage(messageContent) {
 async function runClientTest() {
   try {
     const testPayload = {
-      pythonPath: "/usr/bin/python3",
+      pythonPath: "/usr/bin/python3-doesn't-exist",
       testId: Date.now(),
       action: "test"
     }
@@ -87,3 +87,8 @@ async function runClientTest() {
 
 // Execute the test
 runClientTest()
+
+module.exports = {
+  sendTestMessage,
+  runClientTest
+}

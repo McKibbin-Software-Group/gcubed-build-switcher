@@ -41,6 +41,12 @@
           "type": "string",
           "default": "127.0.0.1",
           "description": "Host IP address for the HTTP server"
+        },
+        "gcubedVenvSwitcher.serverType": {
+          "type": "string",
+          "default": "http",
+          "enum": ["http", "socket"],
+          "description": "Server type to use for interpreter switching: 'http' for HTTP server or 'socket' for Unix socket server"
         }
       }
     }
@@ -62,6 +68,7 @@
   },
   "scripts": {
     "test:socket": "jest -c tests/unixSocketServer/jest.config.js",
+    "test:http": "jest -c tests/httpServer/jest.config.js",
     "version:patch": "npm version patch",
     "version:minor": "npm version minor",
     "version:major": "npm version major",
