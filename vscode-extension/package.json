@@ -1,7 +1,7 @@
 {
   "name": "gcubed-venv-switcher",
   "displayName": "G-Cubed VS Code Python venv switcher",
-  "version": "0.2.20",
+  "version": "0.2.21",
   "publisher": "mckibbin-software-group",
   "repository": "none",
   "description": "Switches VS Code Python interpreter venvs via local HTTP requests",
@@ -45,7 +45,10 @@
         "gcubedVenvSwitcher.serverType": {
           "type": "string",
           "default": "http",
-          "enum": ["http", "socket"],
+          "enum": [
+            "http",
+            "socket"
+          ],
           "description": "Server type to use for interpreter switching: 'http' for HTTP server or 'socket' for Unix socket server"
         }
       }
