@@ -25,8 +25,8 @@ const { promisifyCallbackFunction } = require("./utils")
  * @throws {Error} If socket file cannot be created or secured
  */
 function startUnixSocketServer(incomingMessageProcessor, options = {}) {
-  console.info("Starting promise-based socket server...")
   const socketPath = options.socketPath || SERVER_SOCKET_PATH
+  console.info(`Starting socket server on ${socketPath}...`)
   ensureSocketPathAvailable(socketPath)
 
   const server = net.createServer(async (clientSocketConnection) => {
@@ -106,8 +106,12 @@ function gracefullyShutdownServer(socketServer) {
     // Close server
     socketServer.close(() => {
       // Remove socket file
-      ensureSocketPathAvailable(SERVER_SOCKET_PATH)
-      console.info("Socket server shut down successfully")
+      if (socketServer._socketPath) {
+        ensureSocketPathAvailable(socketServer._socketPath)
+        console.info(`Socket server running on ${socketServer._socketPath} shut down successfully`)
+      } else {
+        console.error("socketServer._socketPath not defined - socket file not deleted!")
+      }
       resolve()
     })
   })
@@ -123,6 +127,7 @@ function gracefullyShutdownServer(socketServer) {
 function ensureSocketPathAvailable(socketPath) {
   if (fs.existsSync(socketPath)) {
     try {
+      console.log(`ensureSocketPathAvailable: Removing existing socket file at ${socketPath}`)
       fs.unlinkSync(socketPath)
     } catch (err) {
       throw new Error(`Failed to remove existing socket: ${err.message}`)
