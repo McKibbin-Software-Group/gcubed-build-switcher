@@ -1,5 +1,5 @@
 "use strict"
-const { NULL_BYTE, MAX_BUFFER_SIZE, INCOMING_MESSAGE_COMPLETION_TIMEOUT_MS } = require("./constants")
+const { NULL_BYTE, MAX_BUFFER_SIZE, INCOMING_MESSAGE_COMPLETION_TIMEOUT_MS } = require("../utils/constants")
 
 
 /**
@@ -27,9 +27,15 @@ function receiveMessageUntilTerminator(clientSocketConnection) {
         clientSocketConnection.removeListener("error", errorHandler)
 
         // 2. Then process data (might throw)
-        const messageString = !messageBuffer
+        let messageString = !messageBuffer
           ? chunk.subarray(0, terminatorIndex).toString("utf8")
           : Buffer.concat([messageBuffer, chunk.subarray(0, terminatorIndex)]).toString("utf8")
+
+        // Strip UTF-8 BOM if present
+        if (messageString.charCodeAt(0) === 0xfeff) {
+          messageString = messageString.substring(1)
+          console.debug("Stripped UTF-8 BOM from incoming message")
+        }
 
         // When processing a message
         console.debug(`Processing message: ${messageString.substring(0, 50)}...`)

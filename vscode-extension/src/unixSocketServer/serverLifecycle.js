@@ -7,7 +7,7 @@ const {
   MAX_CONCURRENT_CLIENT_CONNECTIONS,
   SERVER_SOCKET_MODE,
   activeConnections,
-} = require("./constants")
+} = require("../utils/constants")
 const { receiveMessageUntilTerminator, handleClientError } = require("./messageHandlers")
 const { promisifyCallbackFunction } = require("./utils")
 

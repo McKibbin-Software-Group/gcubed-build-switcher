@@ -28,29 +28,6 @@
   "activationEvents": [
     "onStartupFinished"
   ],
-  "contributes": {
-    "configuration": {
-      "title": "Network Configuration",
-      "properties": {
-        "gcubedVenvSwitcher.localPort": {
-          "type": "number",
-          "default": 9876,
-          "description": "Local port number for the HTTP server. NOTE: If using a devcontainer, add/modify your devcontainer.json (adjusting the port number appropriately) so that this port isn't shared externally: \n\"portsAttributes\": {\n  \"9876\": {\n    \"label\": \"G-Cubed venv helper\",\n    \"onAutoForward\": \"ignore\",\n    \"visibility\": \"private\"\n  }\n}"
-        },
-        "gcubedVenvSwitcher.hostIP": {
-          "type": "string",
-          "default": "127.0.0.1",
-          "description": "Host IP address for the HTTP server"
-        },
-        "gcubedVenvSwitcher.serverType": {
-          "type": "string",
-          "default": "http",
-          "enum": ["http", "socket"],
-          "description": "Server type to use for interpreter switching: 'http' for HTTP server or 'socket' for Unix socket server"
-        }
-      }
-    }
-  },
   "dependencies": {
     "@types/vscode": "^1.97.0",
     "@vscode/python-extension": "^1.0.5"

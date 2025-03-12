@@ -1,5 +1,5 @@
 "use strict"
-const { INCOMING_MESSAGE_COMPLETION_TIMEOUT_MS } = require("./constants")
+const { INCOMING_MESSAGE_COMPLETION_TIMEOUT_MS } = require("../utils/constants")
 
 /**
  * Converts a callback-style message processor to a Promise

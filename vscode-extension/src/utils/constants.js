@@ -1,3 +1,4 @@
+// src/utils/constants.js (updated)
 "use strict"
 
 /**
@@ -6,31 +7,28 @@
 const EXTENSION_NAME = "G-Cubed venv switcher"
 const EXTENSION_LOAD_TIME = Date.now()
 
-/**
- * HTTP constants
- */
-const HTTP = {
-  CONTENT_TYPE_JSON: "application/json",
-  STATUS: {
-    OK: 200,
-    BAD_REQUEST: 400,
-    NOT_FOUND: 404,
-    UNPROCESSABLE_ENTITY: 422,
-    SERVER_ERROR: 500
-  }
-}
+// Use an environment variable with default - one canonical definition
+const SOCKET_PATH_ENV_VAR = "GCUBED_VENV_SOCKET_PATH"
+const SERVER_SOCKET_PATH = process.env[SOCKET_PATH_ENV_VAR] || "/tmp/gcubed_venv_switcher.sock"
 
-/**
- * Server types
- */
-const SERVER_TYPES = {
-  HTTP: "http",
-  SOCKET: "socket"
-}
+// Export the relevant socket server constants
+const NULL_BYTE = 0
+const MAX_BUFFER_SIZE = 1024 // 1KB limit
+const MAX_CONCURRENT_CLIENT_CONNECTIONS = 5
+const INCOMING_MESSAGE_COMPLETION_TIMEOUT_MS = 3000
+const SERVER_SOCKET_MODE = 0o666
+
+// Active connections tracking
+const activeConnections = new Set()
 
 module.exports = {
   EXTENSION_NAME,
   EXTENSION_LOAD_TIME,
-  HTTP,
-  SERVER_TYPES
+  SERVER_SOCKET_PATH,
+  NULL_BYTE,
+  MAX_BUFFER_SIZE,
+  MAX_CONCURRENT_CLIENT_CONNECTIONS,
+  INCOMING_MESSAGE_COMPLETION_TIMEOUT_MS,
+  SERVER_SOCKET_MODE,
+  activeConnections,
 }
