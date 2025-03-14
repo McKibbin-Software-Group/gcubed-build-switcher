@@ -1,28 +1,45 @@
-// src/utils/constants.js (updated)
+/**
+ * @fileoverview Defines constants used throughout the extension
+ * Contains configuration values, limits, and shared resources
+ */
+
 "use strict"
 
 /**
- * Extension metadata
+ * Extension metadata and identification
  */
 const EXTENSION_NAME = "G-Cubed venv switcher"
 const EXTENSION_LOAD_TIME = Date.now()
 
-// Use an environment variable with default - one canonical definition
+/**
+ * Socket path configuration
+ * Uses environment variable if available, otherwise defaults to /tmp
+ */
 const SOCKET_PATH_ENV_VAR = "GCUBED_VENV_SOCKET_PATH"
 const SERVER_SOCKET_PATH = process.env[SOCKET_PATH_ENV_VAR] || "/tmp/gcubed_venv_switcher.sock"
 
-// Export the relevant socket server constants
+/**
+ * Socket communication parameters
+ * Defines message format and size limitations
+ */
 const NULL_BYTE = 0
 const MAX_BUFFER_SIZE = 1024 // 1KB limit
+
+/**
+ * Connection management settings
+ * Controls concurrency and timeout behaviors
+ */
 const MAX_CONCURRENT_CLIENT_CONNECTIONS = 5
 const SERVER_SOCKET_MODE = 0o666
 const SOCKET_INACTIVITY_TIMEOUT = 5000
 const FIRM_SOCKET_CLOSE_TIMEOUT = 3000
 const INCOMING_MESSAGE_COMPLETION_TIMEOUT_MS = 1000
 
-// Active connections tracking
+/**
+ * Shared state for connection tracking across modules
+ * @type {Set<import('net').Socket>}
+ */
 const activeConnections = new Set()
-
 
 module.exports = {
   EXTENSION_NAME,

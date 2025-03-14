@@ -1,33 +1,40 @@
+/**
+ * @fileoverview Unix Socket Server Manager for Python interpreter switching
+ * Creates and manages a Unix socket server for IPC communication
+ * Handles socket file lifecycle, server configuration, and connection management
+ *
+ * @module socketServerManager
+ */
+
 "use strict"
 
-// Creates/starts server
-// Manages socket file & permissions
-// Tracks active connections
-// Passes new client connections to socketClientHandler
+const { handleClientConnection } = require("./socketClientHandler")
 
 const net = require("net")
 const fs = require("fs")
 const {
   SERVER_SOCKET_PATH,
-  NULL_BYTE,
   MAX_CONCURRENT_CLIENT_CONNECTIONS,
   SERVER_SOCKET_MODE,
   activeConnections,
 } = require("../utils/constants")
-const { receiveMessageUntilTerminator, handleClientError } = require("./requestReceiver")
 
 /**
  * Starts a Unix socket server for secure JSON message exchange over IPC
  * Handles connection management, message parsing, and error handling
+ *
+ * @param {Object} [options] - Configuration options for the socket server
+ * @param {string} [options.socketPath] - Custom socket file path
+ * @returns {net.Server} The created server instance
+ * @throws {Error} If socket file cannot be deleted or server cannot start
  */
-
 function startUnixSocketServer(options = {}) {
   const socketPath = options.socketPath || SERVER_SOCKET_PATH
   console.info(`Starting socket server on ${socketPath}...`)
 
   _deleteStaleSocketFile(socketPath)
 
-  const server = net.createServer(handleNewClientConnection)
+  const server = net.createServer(handleClientConnection)
 
   _configureAndStartServer(server, socketPath)
 
@@ -36,6 +43,7 @@ function startUnixSocketServer(options = {}) {
 
 /**
  * Gracefully shuts down the server and cleans up resources
+ * Closes all active connections and removes the socket file
  *
  * @param {net.Server} socketServer - Server instance to shut down
  * @returns {Promise<void>} Promise resolving when server is fully closed
@@ -113,20 +121,6 @@ function _configureAndStartServer(socketServer, socketPath) {
   socketServer._socketPath = socketPath
 
   socketServer.on("error", (err) => console.error("Server error:", err))
-}
-
-
-
-
-/**
- * Logs server statistics such as memory usage and active connections
- */
-function _logServerStats() {
-  console.info(
-    `Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB, Connections: ${
-      activeConnections.size
-    }`
-  )
 }
 
 module.exports = { startUnixSocketServer, gracefullyShutdownServer }

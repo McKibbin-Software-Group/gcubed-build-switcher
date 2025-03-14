@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Interface to VS Code's Python extension
+ * Provides functionality for discovering, managing and switching Python environments
+ * Handles extension activation, environment refresh, and interpreter switching
+ */
+
 "use strict"
 const vscode = require("vscode")
 const pythonExt = require("@vscode/python-extension")
@@ -61,7 +67,7 @@ async function getPythonExtensionWithRetry({ maxRetries = 0, delayMs = 3000 } = 
 
 /**
  * Retrieves Python extension API
- * @returns {Promise<Object>} The Python extension API
+ * @returns {Promise<import('@vscode/python-extension').PythonExtension>} The Python extension API
  */
 async function getPythonApi() {
   await ensurePythonExtension({ maxRetries: 3, delayMs: 500 })
@@ -82,11 +88,18 @@ async function switchPythonEnvironment(pythonApi, absolutePath, displayName) {
   return await pythonApi.environments.updateActiveEnvironmentPath(absolutePath)
 }
 
+
+/**
+ * @typedef {Object} PythonEnvironment
+ * @property {string} id - Environment identifier
+ * @property {string} path - Path to the Python interpreter
+ * @property {string} [displayName] - Human-readable name
+ */
 /**
  * Refreshes Python environments and returns the list
  * @param {Object} pythonApi - Python extension API
  * @param {boolean} forceRefresh - Whether to force refresh
- * @returns {Promise<Array>} List of known environments
+ * @returns {Promise<Array<Object<string, PythonEnvironment>>>} List of known environments
  */
 async function refreshPythonEnvironments(pythonApi, forceRefresh = true) {
   await pythonApi.environments.refreshEnvironments({ forceRefresh })
@@ -125,5 +138,5 @@ module.exports = {
   refreshPythonEnvironments,
   switchPythonEnvironment,
   isPathInKnownEnvironments,
-  formatEnvironmentsAsList
+  formatEnvironmentsAsList,
 }

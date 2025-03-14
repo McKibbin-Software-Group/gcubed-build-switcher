@@ -1,4 +1,12 @@
+/**
+ * @fileoverview Handles Unix socket client connections for the Python interpreter switcher
+ * Manages connection lifecycle, message parsing, and response handling
+ * Implements robust error handling and resource cleanup
+ */
+
 "use strict"
+
+const { switchInterpreter } = require("../handlers/interpreterHandler")
 
 const {
   MAX_CONCURRENT_CLIENT_CONNECTIONS,
@@ -10,14 +18,13 @@ const {
   activeConnections,
 } = require("../utils/constants")
 
-const { promisifyCallbackFunction } = require("./utils")
-
-// Handles an individual connection lifecycle
-// Gets messages via messageParser
-// Processes requests (calls interpreter functions)
-// Sends responses
-// Manages errors for a client
-
+/**
+ * Handles an individual connection lifecycle from acceptance to termination
+ * Enforces connection limits, processes requests, and ensures proper cleanup
+ *
+ * @param {net.Socket} clientSocketConnection - Active client socket connection
+ * @returns {Promise<void>}
+ */
 async function handleClientConnection(clientSocketConnection) {
   // Check connection limit BEFORE adding to active connections
   if (activeConnections.size >= MAX_CONCURRENT_CLIENT_CONNECTIONS) {
@@ -35,17 +42,18 @@ async function handleClientConnection(clientSocketConnection) {
     return // Stop processing this connection
   }
 
-  // Track active connections
-  clientSocketConnection._connectedAt = Date.now()
   addActiveConnectionToTracker(clientSocketConnection)
-
   startListeners(clientSocketConnection)
 
+  // Wait for a request, error, or timeout. A valid request is
+  // a JSON object with at least 'pythonPath' and 'action' keys
   try {
-    // Wait for a request, error, or timeout. A valid request with be a JSON
-    // object with at least 'pythonPath' and 'action' keys
-    const requestObject = await receiveClientRequest(clientSocketConnection)
-    const response = await processInterpreterRequest(requestObject)
+    let requestObject = await receiveClientRequest(clientSocketConnection)
+    requestObject = validateClientRequest(requestObject)
+
+    if (!requestObject.isValid) throw new Error(requestObject.error)
+
+    const response = await switchInterpreter(requestObject.pythonPath, requestObject.shortName)
     await sendJsonResponseAndWait(clientSocketConnection, response)
   } catch (error) {
     handleClientError(clientSocketConnection, error)
@@ -63,7 +71,6 @@ async function handleClientConnection(clientSocketConnection) {
  * @returns {Promise<Object>} Object containing the request
  * @throws {Error} On timeout, buffer overflow, or connection errors
  */
-
 function receiveClientRequest(clientSocketConnection) {
   return new Promise((resolve, reject) => {
     let messageBuffer = null
@@ -131,6 +138,12 @@ function receiveClientRequest(clientSocketConnection) {
   })
 }
 
+/**
+ * Sets up event listeners for socket lifecycle events
+ * Registers handlers for timeout, end, error and close events
+ *
+ * @param {net.Socket} clientSocketConnection - Active client connection
+ */
 function startListeners(clientSocketConnection) {
   clientSocketConnection.setTimeout(SOCKET_INACTIVITY_TIMEOUT)
   // Register socket event handlers
@@ -139,8 +152,14 @@ function startListeners(clientSocketConnection) {
   })
   clientSocketConnection.on("end", () => console.info("Client disconnected (end event)"))
   clientSocketConnection.on("error", (clientError) => handleClientError(clientSocketConnection, clientError))
-}
 
+  // Important to detect "close" event and free any remaining resources
+  clientSocketConnection.once("close", () => {
+    clientSocketConnection.removeAllListeners()
+    activeConnections.delete(clientSocketConnection)
+    console.info(`Client connection closed (active: ${activeConnections.size})`)
+  })
+}
 
 /**
  * Gracefully handles client errors with appropriate response
@@ -154,10 +173,40 @@ function handleClientError(clientSocketConnection, clientError) {
   try {
     sendJsonResponse(clientSocketConnection, {
       success: false,
-      error: `Protocol error: ${clientError.message}`,
+      error: `Error - ${clientError.message}`,
     })
-  } finally {
-    firmlyCloseClientConnection(clientSocketConnection)
+  } catch (err) {
+    // Ignore errors when sending error responses - we're already in an error state
+  }
+}
+
+/**
+ * Validates incoming client request structure and content
+ * Checks for required fields and proper action type
+ *
+ * @param {Object} requestObject - Raw request object from client
+ * @returns {Object} Object with shape {isValid: boolean, error?: string, pythonPath?: string, ...}
+ */
+function validateClientRequest(requestObject) {
+  try {
+    // Extract action and handle accordingly
+    const action = requestObject.action || ""
+
+    if (action === "set-interpreter" && requestObject.pythonPath) {
+      requestObject.isValid = true
+      return requestObject
+    } else {
+      return {
+        isValid: false,
+        error: `Unsupported request: ${JSON.stringify(requestObject)}`,
+      }
+    }
+  } catch (error) {
+    console.error("Error handling socket message:", error)
+    return {
+      isValid: false,
+      error: `Failed to process request: ${error.message}`,
+    }
   }
 }
 
@@ -192,16 +241,23 @@ async function sendJsonResponseAndWait(clientSocketConnection, responseObject) {
   })
 }
 
+/**
+ * Adds connection to active connections tracker and records connection time
+ *
+ * @param {net.Socket} clientSocketConnection - Active client connection
+ */
 function addActiveConnectionToTracker(clientSocketConnection) {
-  activeConnections.add(clientSocketConnection)
   clientSocketConnection._connectedAt = Date.now() // Track connection time
+  activeConnections.add(clientSocketConnection)
   console.info(`Client connected (active: ${activeConnections.size}/${MAX_CONCURRENT_CLIENT_CONNECTIONS})`)
 }
 
 /**
- * Tries to write remaining data and politely close the client connection.
- * If client doesn't play ball then destroys the connection after timeout
- * @param {*} clientSocketConnection
+ * Tries to write remaining data and politely close the client connection
+ * If client doesn't close gracefully within timeout, forces closure
+ * Socket cleanup handled by the 'close' event handler
+ *
+ * @param {net.Socket} clientSocketConnection - The client connection to close
  */
 function firmlyCloseClientConnection(clientSocketConnection) {
   if (!clientSocketConnection) return
@@ -209,19 +265,16 @@ function firmlyCloseClientConnection(clientSocketConnection) {
   // Capture in closure for safety
   const socket = clientSocketConnection
 
-  const forceCloseTimeout = setTimeout(() => {
+  // Always check after timeout to ensure the socket fully closed
+  // Don't care if this is redundant. Belts & braces!
+  setTimeout(() => {
     if (!socket.destroyed) {
       console.warn("Socket didn't close gracefully within timeout, forcing closure")
       socket.destroy()
     }
   }, FIRM_SOCKET_CLOSE_TIMEOUT)
 
-  socket.once("close", () => {
-    clearTimeout(forceCloseTimeout)
-    activeConnections.delete(socket)
-    console.info(`Client connection closed (active: ${activeConnections.size})`)
-  })
-
+  // the close eventListener will release resources when either end() or destroy() is successful
   socket.end()
 }
 

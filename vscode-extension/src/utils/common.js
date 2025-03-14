@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Common utility functions used throughout the extension
+ * Provides helpers for async operations, error handling, and validation
+ */
+
 "use strict"
 const vscode = require("vscode")
 
@@ -13,12 +18,14 @@ function delay(ms) {
 /**
  * Creates an error and logs it to console and UI
  * @param {string} message - Error message
+ * @param {Error} [originalError] - Original error to wrap
  * @returns {Error} Created error
  */
-function createAndReportError(message) {
-  console.error(message)
-  vscode.window.showErrorMessage(message)
-  return new Error(message)
+function createAndReportError(message, originalError) {
+  const fullMessage = originalError ? `${message}: ${originalError.message}` : message
+  console.error(fullMessage, originalError || "")
+  vscode.window.showErrorMessage(fullMessage)
+  return new Error(fullMessage)
 }
 
 /**
@@ -33,5 +40,5 @@ function isValidNonEmptyString(value) {
 module.exports = {
   delay,
   createAndReportError,
-  isValidNonEmptyString
+  isValidNonEmptyString,
 }

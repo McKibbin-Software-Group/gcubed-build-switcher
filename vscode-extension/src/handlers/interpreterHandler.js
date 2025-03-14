@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Handles Python interpreter switching operations for VS Code
+ * Provides functionality to validate, resolve, and switch Python environments
+ * Interfaces with the VS Code Python extension API
+ */
+
 "use strict"
 const vscode = require("vscode")
 const path = require("path")
@@ -11,12 +17,21 @@ const {
 } = require("../python/pythonExtension")
 
 /**
+ * @typedef {Object} InterpreterSwitchResult
+ * @property {boolean} success - Whether the operation succeeded
+ * @property {string} [message] - Success message (when success is true)
+ * @property {string} [error] - Error message (when success is false)
+ * @property {string} [requestedPath] - Original requested path
+ * @property {string} [knownEnvironments] - List of available environments
+ */
+/**
  * Core function to handle Python interpreter switching
  * @param {string} pythonPath - Path to the Python interpreter
  * @param {string} [shortName] - Optional display name for the environment
- * @returns {Promise<{success: boolean, message?: string, error?: string, requestedPath?: string, knownEnvironments?: string}>}
+ * @returns {Promise<InterpreterSwitchResult>} Result of the operation
  */
 async function switchInterpreter(pythonPath, shortName) {
+  console.debug(`switchInterpreter called with pythonPath: ${pythonPath}, shortName: ${shortName || "(none)"}`)
   // Validate input
   if (!pythonPath || typeof pythonPath !== "string" || pythonPath.trim() === "") {
     console.error("Invalid request: pythonPath must be a non-empty string")
@@ -74,7 +89,7 @@ async function switchInterpreter(pythonPath, shortName) {
     // Return success
     return {
       success: true,
-      message: `Successfully switched to ${pythonPath}`,
+      message: `Switched to ${pythonPath}`,
       requestedPath: pythonPath,
     }
   } catch (error) {
@@ -92,11 +107,16 @@ async function switchInterpreter(pythonPath, shortName) {
 }
 
 /**
- * Resolves a path relative to workspace root
- * @param {string} requestedPythonPath - Path to resolve
- * @returns {string} Absolute path
+ * Resolves a path to its absolute form relative to workspace root
+ *
+ * @param {string} requestedPythonPath - Path to resolve, can be relative or absolute
+ * @returns {string} Fully resolved absolute path
+ * @throws {Error} If no workspace folders are open
  */
 function resolveAbsolutePath(requestedPythonPath) {
+  if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders.length) {
+    throw new Error("No workspace folder open. Please open a folder and try again.")
+  }
   return path.resolve(vscode.workspace.workspaceFolders[0].uri.fsPath, requestedPythonPath)
 }
 
