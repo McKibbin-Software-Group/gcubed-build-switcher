@@ -52,6 +52,7 @@ def activate_venv(venv_path):
 
     Returns:
         bool: True if activation successful, False otherwise
+              Note - special case if we get an exception looking for the package
     """
     if venv_path is False:
         return False

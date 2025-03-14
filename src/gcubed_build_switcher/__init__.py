@@ -54,6 +54,15 @@ def activate_or_build_and_activate_venv(build_tag):
             )
         return result
     # No venv
+
+    display_warning(
+        [
+            "WARNING: Requested virtual environment is not available.",
+            "WARNING: This should not happen.",
+            "WARNING: Please contact G-Cubed support.",
+        ],
+        alignment="left",
+    )
     return False
 
 
