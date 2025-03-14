@@ -1,6 +1,5 @@
 
-const { startUnixSocketServer } = require("./serverLifecycle")
-const { gracefullyShutdownServer } = require("./serverLifecycle")
+const { startUnixSocketServer, gracefullyShutdownServer } = require("./socketServerManager")
 
 module.exports = {
   startUnixSocketServer,

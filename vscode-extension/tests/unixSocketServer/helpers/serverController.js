@@ -92,6 +92,7 @@ class ServerController {
     try {
       if (server._socketPath && fs.existsSync(server._socketPath)) {
         fs.unlinkSync(server._socketPath)
+        console.log(`Test additionally deleted socket file: ${server._socketPath}`)
       }
     } catch (e) {}
   }

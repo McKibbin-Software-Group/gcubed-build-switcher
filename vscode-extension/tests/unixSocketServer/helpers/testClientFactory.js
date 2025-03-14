@@ -1,6 +1,6 @@
 "use strict"
 const net = require("net")
-const { SERVER_SOCKET_PATH } = require("../../../src/unixSocketServer/constants")
+const { SERVER_SOCKET_PATH } = require("../../../src/utils/constants")
 
 /**
  * Creates specialized test clients for various edge case scenarios

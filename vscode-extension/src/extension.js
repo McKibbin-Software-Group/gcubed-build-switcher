@@ -13,7 +13,7 @@ async function activate(context) {
   console.log(`${EXTENSION_NAME} extension activated (took ${loadToActivateTime}ms since load)`)
 
   try {
-    server = startUnixSocketServer(handleSocketRequest)
+    server = startUnixSocketServer()
 
     console.log(`Interpreter switcher socket server listening`)
 

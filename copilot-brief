@@ -1,0 +1,11 @@
+We will be talking about the implementation of the JavaScript vscode-extension from this point forwards (that is, the contents of `vscode-extension` and its child directories, especially `src`).
+
+Before answering any questions in this chat, have a look at the files in my #codebase , focussing on files in `vscode-extension/src` and ensure you have a fresh view.
+
+The intent of this extension is to live inside a devcontainer context and listen for and act upon simple requests from a python-based client within that same devcontainer context to change the current VS Code Python Interpreter (ie change active venv).
+
+The extension was initially written to support HTTP connectivity, then we added Unix Sockets, and we have now deprecated and largely removed the HTTP part.
+
+I would like to review and improve the current structure of the extension implementation - but only want to focus on low-hanging fruit.  I want to do what is simple and doesn't require wholesale code rewrite - but only if it enhances understandability or maintainability
+
+ Any & all advice appreciated.

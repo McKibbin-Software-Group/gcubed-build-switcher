@@ -1,16 +1,20 @@
 "use strict"
 const { NULL_BYTE, MAX_BUFFER_SIZE, INCOMING_MESSAGE_COMPLETION_TIMEOUT_MS } = require("../utils/constants")
 
-
 /**
  * Receives and accumulates data chunks until finding a null terminator
+ * That data should be a JSON request (stringified & UTF-8 encoded)
+ * Returns request object on success, rejects/throws errors
+ * Does NOT close the socket connection
+ * Manages listeners etc required to
  * Includes timeout protection and buffer overflow prevention
  *
  * @param {net.Socket} clientSocketConnection - Active client connection
- * @returns {Promise<string>} UTF-8 decoded message content (without terminator)
+ * @returns {Promise<Object>} Object containing the request
  * @throws {Error} On timeout, buffer overflow, or connection errors
  */
-function receiveMessageUntilTerminator(clientSocketConnection) {
+
+function receiveClientRequest(clientSocketConnection) {
   return new Promise((resolve, reject) => {
     let messageBuffer = null
 
@@ -18,13 +22,14 @@ function receiveMessageUntilTerminator(clientSocketConnection) {
       // Fast path: check for terminator
       const terminatorIndex = chunk.indexOf(NULL_BYTE)
 
+      // if we find the terminator then stop listening for any more messages
+      // from this client (only valid for client to send one request at a time)
+      // and process the message.
       if (terminatorIndex !== -1) {
-        // Clear timeout when message completes
-        clearTimeout(messageTimeout)
-
         // 1. Clean up event listeners first (guarantees no more callbacks)
-        clientSocketConnection.removeListener("data", dataHandler)
-        clientSocketConnection.removeListener("error", errorHandler)
+        stopListeners()
+        // Clear timeout
+        clearTimeout(messageTimeout)
 
         // 2. Then process data (might throw)
         let messageString = !messageBuffer
@@ -37,19 +42,17 @@ function receiveMessageUntilTerminator(clientSocketConnection) {
           console.debug("Stripped UTF-8 BOM from incoming message")
         }
 
-        // When processing a message
         console.debug(`Processing message: ${messageString.substring(0, 50)}...`)
 
         // 3. Finally validate and resolve/reject
         try {
-          JSON.parse(messageString)
-          resolve(messageString)
+          resolve(JSON.parse(messageString))
         } catch (jsonError) {
           // When rejecting for invalid JSON
           console.warn(`Invalid JSON: ${jsonError.message}`)
           reject(new Error(`Invalid JSON in message: ${jsonError.message}`))
         }
-
+        // can do any other cleanup here before the reject is received and processed...
         return
       }
 
@@ -57,8 +60,8 @@ function receiveMessageUntilTerminator(clientSocketConnection) {
       const totalSize = (messageBuffer ? messageBuffer.length : 0) + chunk.length
       if (totalSize > MAX_BUFFER_SIZE) {
         clearTimeout(messageTimeout)
-        clientSocketConnection.removeListener("data", dataHandler)
-        clientSocketConnection.removeListener("error", errorHandler)
+        stopListeners()
+        clientSocketConnection.end()
         reject(new Error(`Message size exceeds limit of ${MAX_BUFFER_SIZE} bytes`))
         return
       }
@@ -69,22 +72,36 @@ function receiveMessageUntilTerminator(clientSocketConnection) {
 
     const errorHandler = (err) => reject(err)
 
-    // Set up listeners
-    clientSocketConnection.on("data", dataHandler)
-    clientSocketConnection.on("error", errorHandler)
+    function stopListeners() {
+      // Clean up event listeners first (guarantees no more callbacks)
+      clientSocketConnection.removeListener("data", dataHandler)
+      clientSocketConnection.removeListener("error", errorHandler)
+    }
+
+    function stopListenersAndEndConnection() {
+      stopListeners()
+      clientSocketConnection.end()
+    }
+
+    function startListeners() {
+      // Set up listeners
+      clientSocketConnection.on("data", dataHandler)
+      clientSocketConnection.on("error", errorHandler)
+    }
 
     // Add timeout handling - if message isn't completed within timeout then
     // reject with an error and close down the client connection
     const messageTimeout = setTimeout(() => {
       console.warn(`Message timed out after ${INCOMING_MESSAGE_COMPLETION_TIMEOUT_MS}ms`)
-      clientSocketConnection.removeListener("data", dataHandler)
-      clientSocketConnection.removeListener("error", errorHandler)
-      reject(new Error("Connection timeout - message incomplete"))
+      stopListeners()
       clientSocketConnection.end()
+      reject(new Error("Connection timeout - message incomplete"))
     }, INCOMING_MESSAGE_COMPLETION_TIMEOUT_MS)
+
+    // Annnnd go!
+    startListeners()
   })
 }
-
 
 /**
  * Gracefully handles client errors with appropriate response
@@ -109,6 +126,6 @@ function handleClientError(clientSocketConnection, clientError) {
 }
 
 module.exports = {
-  receiveMessageUntilTerminator,
+  receiveMessageUntilTerminator: receiveClientRequest,
   handleClientError,
 }
