@@ -170,8 +170,13 @@ def activate_rich_formatter(venv_path):
                     f.write("\n".join(filtered_lines))
             else:  # Empty file after removal
                 os.remove(customize_file)
-            print("Rich traceback formatter disabled")
+            print("Rich traceback formatter has been disabled.")
 
+        else:
+          print("Rich traceback formatter was not enabled in the first place.")
+
+    else:
+        print("Rich traceback formatter is not enabled.")
 
 def validate_build_tag(build_tag):
     """
