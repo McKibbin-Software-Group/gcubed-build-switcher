@@ -14,78 +14,10 @@ This repo consists of two components:
 
 
 ## Installation
-When setting up a devcontainer that will use this facility:
-  1. Install the Python TOML file and the JavaScript extension file. These are pulled from this repo's GitHub `latest` release tag. This should be done early in the piece, ie in the Dockerfile:
 
-      ```docker
-      RUN set -eux; \
-        pwd; \
-        ls -alh; \
-        echo Making directory; \
-        mkdir -p /home/vscode/extensions/gcubed-venv-switcher; \
-        cd /home/vscode/extensions/gcubed-venv-switcher; \
-        curl -L -O https://github.com/McKibbin-Software-Group/gcubed-build-switcher/releases/latest/download/pyproject.toml; \
-        curl -L -O https://github.com/McKibbin-Software-Group/gcubed-build-switcher/releases/latest/download/gcubed-vscode-venv-switcher.vsix
-      ```
+The outputs of this repo are assumed to be used by G-Cubed customer devcontainers built from the [G-Cubed Devcontainer Template](https://github.com/McKibbin-Software-Group/gcubed-devcontainer-template).
 
-  2. Add the following to the `devcontainer.json` root of the repository requiring this capability:
-
-      ```json
-      "containerEnv": {
-        // ensure that uv copies dependencies into the venvs - as otherwise venvs are linked from cache
-        // which disappears when the container is rebuilt.
-        "UV_LINK_MODE": "copy",
-        // Where the virtual environments will be stored. Must be in project root so that vscode can see them
-        "GCUBED_ROOT": "${containerWorkspaceFolder}{{USER_DATA_SUBDIRECTORY}}",
-        // Repo from which to retrieve the gcubed python prerequisites
-        "GCUBED_PYTHON_PREREQUISITES_REPO": "https://github.com/McKibbin-Software-Group/python-gcubed-prerequisites",
-        // Package name of gcubed code within the python prerequisites (used to ensure that gcubed code is installed)
-        "GCUBED_CODE_PACKAGE_NAME=gcubed": "gcubed"
-      },
-      ```
-      **NOTE:** `GCUBED_ROOT` should point to the root of your G-Cubed `project` within the container, not the root of the container.
-
-      **NOTE:**  If you want to disable the auto build switching for a customer/devcontainer, set any value for GCUBED_CODE_AUTO_BUILD_SWITCHER_DISABLED (eg TRUE) in the environment. This can be set in the customer-configuration.env file for a 'permanent' change to a specific repo's devcontainer, or can be export/unset on the fly in a terminal session.
-
-  3. Add the following to `customizations.vscode.extensions` object in the `devcontainer.json` root of the repository requiring this capability:
-
-      ```json
-      "customizations": {
-        "vscode": {
-          "extensions": [
-            // Ignore linter errors for the local vsix file - schema file simply does not include this pattern
-            "/home/vscode/extensions/gcubed-venv-switcher/gcubed-vscode-venv-switcher.vsix",
-            ...rest of your extensions definition
-          ]
-        }
-      }
-      ```
-
-  4. Ensure that `uv` is being installed in the G-Cubed devcontainer.  Can be done in a RUN section of your Dockerfile:
-        ```docker
-        RUN su vscode -c "curl -LsSf https://astral.sh/uv/0.6.3/install.sh | sh"; \
-        ```
-
-  5. Include `venv_gcubed*` in the container's `.gitignore`
-
-  6. The following TOML file is separately attached to the release so that the `gcubed-setup.sh` script or similar method can install the file and use a tool such as 'uv' to install the dependency into global (--system) space:
-
- ```toml
-[project]
-name = "G-Cubed_Build_Switcher"
-version = "1.0.0"
-dependencies = [
-    "gcubed-build-switcher @ git+https://github.com/McKibbin-Software-Group/gcubed-build-switcher@main"
-]
-```
-
-If using `uv` to install the dependency then the command would be something like:
-
-```
-sudo $(which uv) pip install --system -r pyproject.toml
-```
-
-  5. At the beginning of a simulation script import the `activate_or_build_and_activate_venv` function from this module and pass it a G-Cubed Code build tag which corresponds with a tag in the G-Cubed Code repo.  If that completes successfully then continue as normal with your script.
+This template pulls all prerequisites from files attached to the 'latest' tag of [this repo on GitHub](https://github.com/McKibbin-Software-Group/gcubed-build-switcher) at container build stage.  For instructions on creating a GitHub release see this [README.md](release-files/README.md).
 
 
 ## Usage
@@ -93,6 +25,10 @@ A CLI tool is provided in the target environment:
 ```bash
 gcubed-switch [build_tag]
 ```
+
+### Building into G-Cubed Python Scripts
+At the beginning of a simulation script import the `activate_or_build_and_activate_venv` function from this module and pass it a G-Cubed Code build tag which corresponds with a tag in the G-Cubed Code repo.  If that completes successfully then continue as normal with your script.
+
 ### End-user python script example
 A simple python script which invokes this module & requests a venv switch. Takes the gcubed code build tag from command-line or defaults to a preset version.
 
