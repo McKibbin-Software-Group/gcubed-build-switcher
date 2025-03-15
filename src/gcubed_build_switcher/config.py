@@ -1,5 +1,4 @@
 import os
-import sys
 
 # Constants
 VENV_NAME_PREFIX = "venv_gcubed_"
