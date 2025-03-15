@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gcubed-build-switcher"
-version = "0.1.0"
+version = "0.2.3"
 description = "Provides a way for G-Cubed model simulations to satisfy their dependencies on the fly."
 readme = "README.md"
 authors = [
