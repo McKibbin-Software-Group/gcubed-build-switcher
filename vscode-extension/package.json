@@ -1,7 +1,7 @@
 {
   "name": "gcubed-venv-switcher",
   "displayName": "G-Cubed VS Code Python venv switcher",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "mckibbin-software-group",
   "repository": "none",
   "description": "Switches VS Code Python interpreter venvs via local HTTP requests",
@@ -50,11 +50,12 @@
     "version:minor": "npm version minor",
     "version:major": "npm version major",
     "clean": "rm -rf dist production test && mkdir -p dist production test",
+    "copy-to-release-files": "cp production/*.vsix ../release-files",
     "build": "esbuild src/extension.js --bundle --platform=node --external:vscode --outfile=dist/extension.js",
     "build:prod": "esbuild src/extension.js --bundle --minify --platform=node --external:vscode --outfile=dist/extension.js",
     "package:test": "npm run clean && npm run build && vsce package --out test/gcubed-vscode-venv-switcher-test.vsix",
-    "package:patch": "npm version patch && npm run clean && npm run build:prod && vsce package --out production/gcubed-vscode-venv-switcher.vsix",
-    "package:minor": "npm version minor && npm run clean && npm run build:prod && vsce package --out production/gcubed-vscode-venv-switcher.vsix",
-    "package:major": "npm version major && npm run clean && npm run build:prod && vsce package --out production/gcubed-vscode-venv-switcher.vsix"
+    "package:patch": "npm version patch && npm run clean && npm run build:prod && vsce package --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files",
+    "package:minor": "npm version minor && npm run clean && npm run build:prod && vsce package --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files",
+    "package:major": "npm version major && npm run clean && npm run build:prod && vsce package --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files"
   }
 }
