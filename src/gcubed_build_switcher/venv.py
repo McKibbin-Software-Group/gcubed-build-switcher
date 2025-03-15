@@ -325,6 +325,10 @@ def prepare_local_venv(build_tag):
     if create_venv_for_build(build_tag):
         # Verify the newly created venv
         print("Virtual environment created, verifying...")
-        return verify_venv_has_gcubed(venv_path)
+        result = verify_venv_has_gcubed(venv_path)
+        if result:
+            # If all good, then activate rich formatter
+            activate_rich_formatter(venv_path)
+            return True
 
     return False
