@@ -113,6 +113,9 @@ def activate_rich_formatter(venv_path):
     Args:
         venv_path (str): Path to the virtual environment
     """
+
+    print("Configuring Rich formatter...")
+
     # Find the site-packages directory
     site_packages_dirs = glob.glob(
         os.path.join(venv_path, "lib", "python*", "site-packages")
@@ -136,7 +139,7 @@ def activate_rich_formatter(venv_path):
                 existing_content = f.read()
 
             if "from rich.traceback import install" in existing_content:
-                print("Rich traceback formatter enabled")
+                print("Rich traceback formatter is enabled")
                 return  # Already configured
 
             existing_content = existing_content.strip() + "\n\n"
@@ -145,7 +148,7 @@ def activate_rich_formatter(venv_path):
             f.write(
                 f"{existing_content}from rich.traceback import install\ninstall(show_locals=True)"
             )
-        print("Rich traceback formatter enabled")
+        print("Rich traceback formatter has been enabled")
 
     elif os.path.exists(customize_file):
         with open(customize_file, "r") as f:
@@ -303,7 +306,7 @@ def prepare_local_venv(build_tag):
     venv_name = get_venv_name(build_tag)
     venv_path = get_venv_directory_for_build(venv_name)
 
-    # Try to activate existing venv first
+    # Verify existing venv first
     print(f"Verifying '{venv_name}' exists and has the gcubed module installed...")
     result = verify_venv_has_gcubed(venv_path)
     if result:
@@ -311,11 +314,11 @@ def prepare_local_venv(build_tag):
         activate_rich_formatter(venv_path)
         return True
 
-    print("Virtual environment not correctly configured. Re-creating...")
+    print("Something missing, re-creating...")
 
     # Create the venv and install packages
     if create_venv_for_build(build_tag):
-        # Try to activate the newly created venv
+        # Verify the newly created venv
         print("Virtual environment created, verifying...")
         return verify_venv_has_gcubed(venv_path)
 
