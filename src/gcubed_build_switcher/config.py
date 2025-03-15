@@ -1,5 +1,11 @@
 import os
 
+
+def get_optional_env_var(name, default=None):
+    """Get an optional environment variable with default."""
+    return os.environ.get(name, default)
+
+
 # Constants
 VENV_NAME_PREFIX = "venv_gcubed_"
 DEFAULT_TEMP_DIR_SUFFIX = "temp"
@@ -7,9 +13,8 @@ VSCODE_VENV_SWITCHER_API_ACTION = "set-interpreter"
 VSCODE_VENV_SWITCHER_API_TIMEOUT_SECONDS = 5
 
 VSCODE_VENV_SOCKET_PATH_ENV_VAR = "GCUBED_VENV_SOCKET_PATH"
-VSCODE_VENV_SOCKET_PATH = os.environ.get(
-    VSCODE_VENV_SOCKET_PATH_ENV_VAR, "/tmp/gcubed_venv_switcher.sock"
-)
+VSCODE_VENV_SOCKET_PATH = get_optional_env_var(VSCODE_VENV_SOCKET_PATH_ENV_VAR, "/tmp/gcubed_venv_switcher.sock")
+RICH_TRACEBACK_ENABLED = get_optional_env_var("RICH_TRACEBACKS")
 
 class ConfigurationError(Exception):
     """Exception raised for configuration errors."""
@@ -25,10 +30,6 @@ def get_required_env_var(name, error_message=None):
         )
         raise ConfigurationError(msg)
     return value
-
-def get_optional_env_var(name, default=None):
-    """Get an optional environment variable with default."""
-    return os.environ.get(name, default)
 
 def is_feature_disabled(feature_name):
     """

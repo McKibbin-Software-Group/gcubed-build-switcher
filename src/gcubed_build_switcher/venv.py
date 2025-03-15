@@ -7,12 +7,14 @@ import glob
 from .config import (
     VENV_NAME_PREFIX,
     DEFAULT_TEMP_DIR_SUFFIX,
+    RICH_TRACEBACK_ENABLED,
     get_gcubed_root,
     get_package_name,
     get_prerequisites_repo_url,
     ConfigurationError,
 )
 from .packages import install_packages
+
 
 def get_venv_name(gcubed_code_build_tag):
     """
@@ -25,6 +27,7 @@ def get_venv_name(gcubed_code_build_tag):
         str: The virtual environment name
     """
     return f"{VENV_NAME_PREFIX}{gcubed_code_build_tag}"
+
 
 def get_venv_directory_for_build(venv_name):
     """
@@ -82,7 +85,9 @@ def verify_venv_has_gcubed(venv_path):
         sys.exit(1)
     except subprocess.CalledProcessError as e:
         # NOTE: DO NOT DELETE THE VENV IF THE PACKAGE IS NOT FOUND - IT MAY BE THERE FOR OTHER REASONS
-        print(f"Error looking for prerequisite package '{gcubed_package_name}' in virtual environment: {e}.")
+        print(
+            f"Error looking for prerequisite package '{gcubed_package_name}' in virtual environment: {e}."
+        )
         return False
 
     # So the venv exists and there is a gcubed package installed in it
@@ -95,6 +100,74 @@ def remove_directory_tree(directory_to_delete, message):
         shutil.rmtree(directory_to_delete)
         return True
     return False
+
+
+def activate_rich_formatter(venv_path):
+    """
+    Configures Rich traceback handling for the virtual environment.
+
+    When RICH_TRACEBACK_ENABLED is True, finds the appropriate site-packages directory
+    and creates/overwrites the sitecustomize.py file to install Rich traceback formatter.
+    Otherwise, removes the file if it exists.
+
+    Args:
+        venv_path (str): Path to the virtual environment
+    """
+    # Find the site-packages directory
+    site_packages_dirs = glob.glob(
+        os.path.join(venv_path, "lib", "python*", "site-packages")
+    )
+
+    if not site_packages_dirs:
+        print(
+            "Warning: Could not find site-packages directory in virtual environment - cannot activate Rich traceback formatter"
+        )
+        return
+
+    site_packages_dir = site_packages_dirs[0]  # Take the first match
+    customize_file = os.path.join(site_packages_dir, "sitecustomize.py")
+
+    if RICH_TRACEBACK_ENABLED:
+        # Check if file exists and contains our config already
+        existing_content = ""
+
+        if os.path.exists(customize_file):
+            with open(customize_file, "r") as f:
+                existing_content = f.read()
+
+            if "from rich.traceback import install" in existing_content:
+                print("Rich traceback formatter enabled")
+                return  # Already configured
+
+            existing_content = existing_content.strip() + "\n\n"
+
+        with open(customize_file, "w") as f:
+            f.write(
+                f"{existing_content}from rich.traceback import install\ninstall(show_locals=True)"
+            )
+        print("Rich traceback formatter enabled")
+
+    elif os.path.exists(customize_file):
+        with open(customize_file, "r") as f:
+            lines = f.read().splitlines()
+
+        # Look for and remove our Rich configuration
+        has_rich_config = False
+        filtered_lines = []
+
+        for line in lines:
+            if "rich.traceback" in line or "install(show_locals=True)" in line:
+                has_rich_config = True
+                continue  # Skip this line
+            filtered_lines.append(line)
+
+        if has_rich_config:  # Only take action if we found our config
+            if filtered_lines:  # If anything remains, write it back
+                with open(customize_file, "w") as f:
+                    f.write("\n".join(filtered_lines))
+            else:  # Empty file after removal
+                os.remove(customize_file)
+            print("Rich traceback formatter disabled")
 
 
 def validate_build_tag(build_tag):
@@ -180,7 +253,9 @@ def create_venv_for_build(build_tag):
 
         # Find files to install
         wheel_files = glob.glob(os.path.join(temp_dir_path, "*.whl"))
-        requirements_txt_files = glob.glob(os.path.join(temp_dir_path, "requirements*.txt"))
+        requirements_txt_files = glob.glob(
+            os.path.join(temp_dir_path, "requirements*.txt")
+        )
 
         # Install wheel files and requirements files
         if not install_packages(
@@ -216,6 +291,8 @@ def create_venv_for_build(build_tag):
 def prepare_local_venv(build_tag):
     """
     Tries to activate the build. If the build is not found, creates and activates it.
+    Depending on the existence of the RICH_TRACEBACKS environment variable will also
+    enable Rich as the default traceback formatter
 
     Args:
         build_tag (str): The G-Cubed code build tag
@@ -227,17 +304,19 @@ def prepare_local_venv(build_tag):
     venv_path = get_venv_directory_for_build(venv_name)
 
     # Try to activate existing venv first
-    print(f"Attempting to activate venv {venv_name}")
+    print(f"Verifying '{venv_name}' exists and has the gcubed module installed...")
     result = verify_venv_has_gcubed(venv_path)
     if result:
+        # If all good, then activate rich formatter
+        activate_rich_formatter(venv_path)
         return True
 
-    print("Cannot activate the venv. Re-creating the virtual environment...")
+    print("Virtual environment not correctly configured. Re-creating...")
 
     # Create the venv and install packages
     if create_venv_for_build(build_tag):
         # Try to activate the newly created venv
-        print("Virtual environment created, attempting to activate...")
+        print("Virtual environment created, verifying...")
         return verify_venv_has_gcubed(venv_path)
 
     return False
