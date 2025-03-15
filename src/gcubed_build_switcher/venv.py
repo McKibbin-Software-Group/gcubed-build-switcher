@@ -43,33 +43,36 @@ def get_venv_directory_for_build(venv_name):
         print(str(e))
         return False
 
-def activate_venv(venv_path):
+
+def verify_venv_has_gcubed(venv_path):
     """
-    Checks for the existence of the venv and activates it.
+    Checks for the existence of the requested venv and
+    confirm that gcubed is installed in it.
 
     Args:
         venv_path (str): Path to the virtual environment
 
     Returns:
         bool: True if activation successful, False otherwise
+              Note - special case if we get an exception looking for the package
     """
+    # For error bubbling
     if venv_path is False:
         return False
 
-    activate_venv_path = os.path.join(venv_path, "bin", "activate_this.py")
     python_path = os.path.join(venv_path, "bin", "python")
 
-    # Check if venv and activate script exist
-    if not os.path.exists(activate_venv_path):
+    # Check if requested venv exists
+    if not os.path.exists(python_path):
         print(f"Virtual environment not found at: {venv_path}")
         return False
 
-    # Check if the gcubed package is installed
+    # Check if the gcubed package is installed in that venv
     try:
-        package_name = get_package_name()
+        gcubed_package_name = get_package_name()
 
         subprocess.run(
-            ["uv", "pip", "show", "-p", python_path, package_name],
+            ["uv", "pip", "show", "-p", python_path, gcubed_package_name],
             check=True,
             capture_output=True,
             text=True,
@@ -79,24 +82,19 @@ def activate_venv(venv_path):
         sys.exit(1)
     except subprocess.CalledProcessError as e:
         # NOTE: DO NOT DELETE THE VENV IF THE PACKAGE IS NOT FOUND - IT MAY BE THERE FOR OTHER REASONS
-        print(f"Error looking for prerequisite package '{package_name}' in virtual environment: {e}.")
+        print(f"Error looking for prerequisite package '{gcubed_package_name}' in virtual environment: {e}.")
         return False
 
-    # Everything is in place so execute the activate_this.py script
-    try:
-        with open(activate_venv_path) as file:
-            exec(file.read(), dict(__file__=activate_venv_path))
-    except Exception as e:
-        print(f"Error activating virtual environment: {e}")
-        return False
-
-    print(f"Activated virtual environment -")
-    print(f"  Python interpreter: {sys.executable}")
-    print(f"  Python version: {sys.version.split()[0]}")
-    print(f"  Virtual env path: {sys.prefix}")
-    print(f"  VIRTUAL_ENV set: {'VIRTUAL_ENV' in os.environ}")
-
+    # So the venv exists and there is a gcubed package installed in it
     return True
+
+
+def remove_directory_tree(directory_to_delete, message):
+    if os.path.exists(directory_to_delete):
+        print(message)
+        shutil.rmtree(directory_to_delete)
+        return True
+    return False
 
 
 def validate_build_tag(build_tag):
@@ -118,8 +116,7 @@ def validate_build_tag(build_tag):
         temp_dir_path = os.path.join(gcubed_root, temp_dir_name)
 
         # Remove temp directory if it already exists
-        if os.path.exists(temp_dir_path):
-            shutil.rmtree(temp_dir_path)
+        remove_directory_tree(temp_dir_path, "Removing old temp directory...")
 
         # Clone the repository with the specific build tag
         print(f"Validating build tag {build_tag}...")
@@ -146,8 +143,7 @@ def validate_build_tag(build_tag):
             f"Error: Build tag '{build_tag}' does not exist in the prerequisites repository."
         )
         # Clean up temp directory if it was created
-        if os.path.exists(temp_dir_path):
-            shutil.rmtree(temp_dir_path)
+        remove_directory_tree(temp_dir_path, "Cleaning up temp directory")
         return False, None
 
 
@@ -184,7 +180,7 @@ def create_venv_for_build(build_tag):
 
         # Find files to install
         wheel_files = glob.glob(os.path.join(temp_dir_path, "*.whl"))
-        req_files = glob.glob(os.path.join(temp_dir_path, "requirements*.txt"))
+        requirements_txt_files = glob.glob(os.path.join(temp_dir_path, "requirements*.txt"))
 
         # Install wheel files and requirements files
         if not install_packages(
@@ -196,7 +192,7 @@ def create_venv_for_build(build_tag):
             raise RuntimeError(f"Failed to install wheel files for build {build_tag}")
 
         if not install_packages(
-            req_files,
+            requirements_txt_files,
             python_path,
             get_venv_name(DEFAULT_TEMP_DIR_SUFFIX),
             gcubed_root,
@@ -209,15 +205,12 @@ def create_venv_for_build(build_tag):
     except Exception as e:
         print(f"Error creating virtual environment: {e}")
         # If venv was created but installation failed, clean it up
-        if os.path.exists(venv_path):
-            print(f"Cleaning up failed virtual environment...")
-            shutil.rmtree(venv_path)
+        remove_directory_tree(venv_path, "Cleaning up failed virtual environment...")
         return False
+
     finally:
         # Always clean up temp directory
-        print("Cleaning up temporary files...")
-        if os.path.exists(temp_dir_path):
-            shutil.rmtree(temp_dir_path)
+        remove_directory_tree(temp_dir_path, "Cleaning up temporary files...")
 
 
 def prepare_local_venv(build_tag):
@@ -235,7 +228,7 @@ def prepare_local_venv(build_tag):
 
     # Try to activate existing venv first
     print(f"Attempting to activate venv {venv_name}")
-    result = activate_venv(venv_path)
+    result = verify_venv_has_gcubed(venv_path)
     if result:
         return True
 
@@ -245,6 +238,6 @@ def prepare_local_venv(build_tag):
     if create_venv_for_build(build_tag):
         # Try to activate the newly created venv
         print("Virtual environment created, attempting to activate...")
-        return activate_venv(venv_path)
+        return verify_venv_has_gcubed(venv_path)
 
     return False

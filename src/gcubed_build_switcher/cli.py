@@ -1,6 +1,7 @@
 import sys
 import argparse
 from . import activate_or_build_and_activate_venv
+from .messaging import display_warning
 
 def main():
     """
@@ -16,9 +17,12 @@ def main():
     args = parser.parse_args()
 
     if activate_or_build_and_activate_venv(args.build_tag) is False:
-        print(
-            "Failed to activate virtual environment required for this simulation. "
-            "Please contact G-Cubed support."
+        display_warning(
+            [
+                "Failed to activate virtual environment required for this simulation. ",
+                "Please contact G-Cubed support.",
+            ],
+            alignment="left",
         )
         sys.exit(1)
 
@@ -26,4 +30,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
