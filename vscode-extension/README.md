@@ -13,7 +13,7 @@ This extension works in tandem with the G-Cubed Python Virtual Environment Manag
 When a G-Cubed economic model script runs, it can request a specific G-Cubed Code build version. The Python component of this system will:
 1. Check if the requested build's virtual environment exists
 2. Create and set up the environment if necessary
-3. Send a request to this VS Code extension to activate the appropriate Python interpreter
+3. Send a request via secure local Unix Socket to this VS Code extension to activate the appropriate Python interpreter
 
 This ensures that the correct dependencies are available for both code completion/linting and runtime execution.
 
@@ -21,21 +21,6 @@ This ensures that the correct dependencies are available for both code completio
 - VS Code with Python extension
 - G-Cubed Python virtual environment manager component installed
 - Properly configured `devcontainer.json` with required environment variables
-
-## Configuration
-Ensure your `devcontainer.json` includes required port configuration:
-```json
-"portsAttributes": {
-    "8888": {
-      "label": "G-Cubed Chart",
-      "onAutoForward": "openBrowser"
-    },
-    "9876": {
-      "label": "G-Cubed venv helper",
-      "onAutoForward": "ignore"
-    }
-}
-```
 
 ## Usage
 The extension operates automatically in the background. To trigger a build/environment switch from a Python script:

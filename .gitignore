@@ -4,8 +4,11 @@ test-output/
 # scratch files
 scratch/
 
-#G-Cubed virtual environments
+# G-Cubed virtual environments
 venv_gcubed*
+
+# Build-kit files
+*.egg-info/
 
 # Any CSV files that are diagnostics from a model run
 **/diagnostics/

@@ -1,13 +1,15 @@
 import os
-import sys
 
 # Constants
 VENV_NAME_PREFIX = "venv_gcubed_"
 DEFAULT_TEMP_DIR_SUFFIX = "temp"
-VSCODE_VENV_SWITCHER_HOST = "127.0.0.1"
-VSCODE_VENV_SWITCHER_PORT = 9876
-VSCODE_VENV_SWITCHER_API_ROUTE = "set-interpreter"
+VSCODE_VENV_SWITCHER_API_ACTION = "set-interpreter"
 VSCODE_VENV_SWITCHER_API_TIMEOUT_SECONDS = 5
+
+VSCODE_VENV_SOCKET_PATH_ENV_VAR = "GCUBED_VENV_SOCKET_PATH"
+VSCODE_VENV_SOCKET_PATH = os.environ.get(
+    VSCODE_VENV_SOCKET_PATH_ENV_VAR, "/tmp/gcubed_venv_switcher.sock"
+)
 
 class ConfigurationError(Exception):
     """Exception raised for configuration errors."""
