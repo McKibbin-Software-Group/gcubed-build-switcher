@@ -146,7 +146,7 @@ def activate_rich_formatter(venv_path):
 
         with open(customize_file, "w") as f:
             f.write(
-                f"{existing_content}from rich.traceback import install\ninstall(show_locals=True)"
+                f"{existing_content}from rich.traceback import install\ninstall(show_locals=False)"
             )
         print("Rich traceback formatter has been enabled")
 
@@ -159,7 +159,7 @@ def activate_rich_formatter(venv_path):
         filtered_lines = []
 
         for line in lines:
-            if "rich.traceback" in line or "install(show_locals=True)" in line:
+            if "rich.traceback" in line or "show_locals" in line:
                 has_rich_config = True
                 continue  # Skip this line
             filtered_lines.append(line)
