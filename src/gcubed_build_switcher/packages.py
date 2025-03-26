@@ -29,18 +29,12 @@ def install_packages(files, python_path, temp_dir_name, gcubed_root, config_para
     for file_path in files:
         file_name = os.path.basename(file_path)
 
-        cmd = ["uv", "pip", "install"]
+        cmd = ["uv", "pip", "install", "-p", python_path]
 
         if config_param is not None:
             cmd.append(config_param)
 
-        cmd.extend(
-            [
-                "-p",
-                python_path,
-                os.path.join(f"./{temp_dir_name}", file_name),
-            ]
-        )
+        cmd.append( os.path.join(f"./{temp_dir_name}", file_name) )
 
         try:
             subprocess.run(cmd, cwd=gcubed_root, check=True)
