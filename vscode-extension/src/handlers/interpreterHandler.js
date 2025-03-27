@@ -12,8 +12,8 @@ const {
   getPythonApi,
   refreshPythonEnvironments,
   switchPythonEnvironment,
-  isPathInKnownEnvironments,
   formatEnvironmentsAsList,
+  resolvePythonEnvironment,
 } = require("../python/pythonExtension")
 
 /**
@@ -49,49 +49,71 @@ async function switchInterpreter(pythonPath, shortName) {
     // Get Python API
     const pythonApi = await getPythonApi()
 
-    // Get environments and check if requested interpreter exists
+    // DEPRECATED: Checking first is not necessarily reliable. Under some circumstances the extension
+    // DEPRECATED: never sees the virtual env.  Since we're pretty confident the env exists as it will
+    // DEPRECATED: have been created by the Python part, we're going to brute-force it a bit...
+
+    // // Get environments and check if requested interpreter exists
+    // let knownEnvironments = await refreshPythonEnvironments(pythonApi)
+    // console.info("Known environments before switching:")
+    // console.info(formatEnvironmentsAsList(knownEnvironments))
+
+    // // Retry once if not found (Python extension might need time to discover)
+    // if (!isPathInKnownEnvironments(absolutePythonPath, knownEnvironments)) {
+    //   console.warn(`Path not found in known environments, forcing refresh & retrying after 1s: ${absolutePythonPath}`)
+    //   await delay(1000)
+    //   knownEnvironments = await refreshPythonEnvironments(pythonApi)
+    //   console.warn("Retrying after second force refresh. Fingers crossed!")
+    // }
+
+    // // Check again after retry
+    // if (!isPathInKnownEnvironments(absolutePythonPath, knownEnvironments)) {
+    //   const knownEnvironmentsString = formatEnvironmentsAsList(knownEnvironments)
+    //   const message = `Cannot switch to '${pythonPath}' - not found in available Python environments`
+
+    //   console.error(`${message}\nKnown environments:\n${knownEnvironmentsString}`)
+    //   vscode.window.showErrorMessage(message)
+
+    //   return {
+    //     success: false,
+    //     error: message,
+    //     requestedPath: absolutePythonPath,
+    //     knownEnvironments: knownEnvironmentsString,
+    //   }
+    // }
+
+    // refreshing the environment and trying to resolve the new environment should hopefully
+    // be sufficient to make the Python extension actually see the new venv
     let knownEnvironments = await refreshPythonEnvironments(pythonApi)
-    console.info("Known environments before switching:")
-    console.info(formatEnvironmentsAsList(knownEnvironments))
+    console.info("Known (refreshed) environments before switch: ", knownEnvironments)
+    let resolvedEnvironment = await resolvePythonEnvironment(pythonApi, absolutePythonPath, shortName || pythonPath)
+    console.info("Resolved environment before switch: ", resolvedEnvironment)
 
-    // Retry once if not found (Python extension might need time to discover)
-    if (!isPathInKnownEnvironments(absolutePythonPath, knownEnvironments)) {
-      console.warn(`Path not found in known environments, forcing refresh & retrying after 1s: ${absolutePythonPath}`)
-      await delay(1000)
-      knownEnvironments = await refreshPythonEnvironments(pythonApi)
-      console.warn("Retrying after second force refresh. Fingers crossed!")
-    }
-
-    // Check again after retry
-    if (!isPathInKnownEnvironments(absolutePythonPath, knownEnvironments)) {
-      const knownEnvironmentsString = formatEnvironmentsAsList(knownEnvironments)
-      const message = `Cannot switch to '${pythonPath}' - not found in available Python environments`
-
-      console.error(`${message}\nKnown environments:\n${knownEnvironmentsString}`)
-      vscode.window.showErrorMessage(message)
-
-      return {
-        success: false,
-        error: message,
-        requestedPath: absolutePythonPath,
-        knownEnvironments: knownEnvironmentsString,
-      }
-    }
-
-    // Switch interpreter
+    // Try to switch interpreter regardless of whether or not the Python extension thinks it can see it
     await switchPythonEnvironment(pythonApi, absolutePythonPath, shortName || pythonPath)
 
-    // Refresh and display final state
+    // and do it again to get the best chance that we actually know if the environment actually switched...
     knownEnvironments = await refreshPythonEnvironments(pythonApi)
-    console.info("Known environments after switching & forced refresh:")
-    console.info(formatEnvironmentsAsList(knownEnvironments))
+    console.info("Known (refreshed) environments after switch: ", knownEnvironments)
+    resolvedEnvironment = await resolvePythonEnvironment(pythonApi, absolutePythonPath, shortName || pythonPath)
+    console.info("Resolved environment after switch: ", resolvedEnvironment)
 
-    // Return success
-    return {
-      success: true,
-      message: `Switched to ${pythonPath}`,
-      requestedPath: pythonPath,
+    if (resolvedEnvironment !== undefined) {
+      // Return success
+      return {
+        success: true,
+        message: `Switched to ${pythonPath}`,
+        requestedPath: pythonPath
+      }
     }
+    // Return failure
+    return {
+      success: false,
+      message: `Switch to ${pythonPath} did not appear to work - could not resolve the environment`,
+      requestedPath: pythonPath,
+      knownEnvironments: formatEnvironmentsAsList(knownEnvironments),
+    }
+
   } catch (error) {
     console.error("Error using Python API:", error)
     const errorMessage = `Failed to get Python interpreter. Check that the MS Python extension is loaded, enabled, and activated. Error from API: ${

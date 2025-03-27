@@ -88,6 +88,18 @@ async function switchPythonEnvironment(pythonApi, absolutePath, displayName) {
   return await pythonApi.environments.updateActiveEnvironmentPath(absolutePath)
 }
 
+/**
+ * Resolves details of a Python environment using the Python extension API.
+ * @param {Object} pythonApi - The Python extension API.
+ * @param {string} absolutePath - The absolute path to the Python interpreter.
+ * @param {string} [displayName] - An optional display name for the environment, used in notifications.
+ * @returns {Promise<Object>} A promise that resolves to the environment details.
+ * @throws {Error} If the environment cannot be resolved.
+ */
+async function resolvePythonEnvironment(pythonApi, absolutePath, displayName) {
+  console.log(`Resolving venv: '${displayName}': '${absolutePath}'`)
+  return await pythonApi.environments.resolveEnvironment(absolutePath)
+}
 
 /**
  * @typedef {Object} PythonEnvironment
@@ -130,7 +142,7 @@ function formatEnvironmentsAsList(environments) {
       const key = Object.keys(env)[0]
       return `${key}: id: '${env[key].id}', path: '${env[key].path}'`
     })
-    .join("\n")
+    // .join("\n")
 }
 
 module.exports = {
@@ -139,4 +151,5 @@ module.exports = {
   switchPythonEnvironment,
   isPathInKnownEnvironments,
   formatEnvironmentsAsList,
+  resolvePythonEnvironment,
 }

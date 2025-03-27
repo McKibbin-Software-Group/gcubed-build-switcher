@@ -65,14 +65,17 @@ def set_vscode_python_interpreter(build_tag):
             response_data += chunk
 
         # Parse response and determine success
-        response = json.loads(response_data.decode("utf-8"))
+        responseString = response_data.decode("utf-8")
+        responseObject = json.loads(responseString)
 
-        if response.get("success"):
-            print(f"VSCode Python interpreter set to: {python_path}")
+        if responseObject.get("success"):
+            print(
+                f"VSCode Python interpreter set to: {responseObject.get('requestedPath', python_path)}"
+            )
             return True
         else:
             print(
-                f"Failed to set interpreter: {response.get('error', 'Unknown error')}"
+                f"Failed to set interpreter: {responseString}"
             )
             return False
 
