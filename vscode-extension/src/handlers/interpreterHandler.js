@@ -5,6 +5,7 @@
  */
 
 "use strict"
+const { VENV_NAME_PREFIX } = require("../utils/constants")
 const vscode = require("vscode")
 const path = require("path")
 const { delay } = require("../utils/common")
@@ -14,7 +15,57 @@ const {
   switchPythonEnvironment,
   formatEnvironmentsAsList,
   resolvePythonEnvironment,
+  validateStartingPythonInterpreter,
 } = require("../python/pythonExtension")
+
+async function setValidStartingInterpreter() {
+  try {
+    console.info("Validating initial Python interpreter...")
+    const pythonApi = await getPythonApi()
+    const validationResult = await validateStartingPythonInterpreter(pythonApi)
+    if (validationResult.success) {
+      vscode.window.showInformationMessage("Success validating Python virtual environment")
+      return
+    } else {
+      // Venv is not valid, so try to find and set default
+      const pythonConfig = vscode.workspace.getConfiguration("python")
+      const defaultInterpreterPath = pythonConfig.get("defaultInterpreterPath")
+
+      if (defaultInterpreterPath) {
+        vscode.window.showWarningMessage("Invalid initial active Python interpreter - resetting to default...")
+        console.warn(
+          `Initial active interpreter (${validationResult.path}) is invalid - switching to default interpreter: ${defaultInterpreterPath},`
+        )
+        const switchResult = await switchInterpreter(defaultInterpreterPath)
+        if (switchResult.success) {
+          vscode.window.showInformationMessage(switchResult.message)
+          return
+        }
+      }
+
+      // couldn't successfully find the default interpreter. Hail mary - find any gcubed venv which
+      // will hopefully be enough to launch the python environment switcher.
+      console.log(`Found a G-Cubed venv path ${getFirstGcubedVenvPathFromKnownVenvs( validationResult.knownVenvs )}`)
+
+    }
+
+    vscode.window.showErrorMessage("Please contact G-Cubed Support - no valid Python environment found!")
+  } catch (error) {
+    console.error("Error setting valid starting interpreter:", error)
+    vscode.window.showErrorMessage(`Failed to set Python interpreter: ${error.message || String(error)}`)
+    return false
+  }
+
+  function getFirstGcubedVenvPathFromKnownVenvs(knownVenvs) {
+    try {
+      return knownVenvs.find((venv) => {
+        return venv.internal.path.includes(VENV_NAME_PREFIX)
+      }).internal.path
+    } finally {
+      return null
+    }
+  }
+}
 
 /**
  * @typedef {Object} InterpreterSwitchResult
@@ -49,41 +100,6 @@ async function switchInterpreter(pythonPath, shortName) {
     // Get Python API
     const pythonApi = await getPythonApi()
 
-    // DEPRECATED: Checking first is not necessarily reliable. Under some circumstances the extension
-    // DEPRECATED: never sees the virtual env.  Since we're pretty confident the env exists as it will
-    // DEPRECATED: have been created by the Python part, we're going to brute-force it a bit...
-
-    // // Get environments and check if requested interpreter exists
-    // let knownEnvironments = await refreshPythonEnvironments(pythonApi)
-    // console.info("Known environments before switching:")
-    // console.info(formatEnvironmentsAsList(knownEnvironments))
-
-    // // Retry once if not found (Python extension might need time to discover)
-    // if (!isPathInKnownEnvironments(absolutePythonPath, knownEnvironments)) {
-    //   console.warn(`Path not found in known environments, forcing refresh & retrying after 1s: ${absolutePythonPath}`)
-    //   await delay(1000)
-    //   knownEnvironments = await refreshPythonEnvironments(pythonApi)
-    //   console.warn("Retrying after second force refresh. Fingers crossed!")
-    // }
-
-    // // Check again after retry
-    // if (!isPathInKnownEnvironments(absolutePythonPath, knownEnvironments)) {
-    //   const knownEnvironmentsString = formatEnvironmentsAsList(knownEnvironments)
-    //   const message = `Cannot switch to '${pythonPath}' - not found in available Python environments`
-
-    //   console.error(`${message}\nKnown environments:\n${knownEnvironmentsString}`)
-    //   vscode.window.showErrorMessage(message)
-
-    //   return {
-    //     success: false,
-    //     error: message,
-    //     requestedPath: absolutePythonPath,
-    //     knownEnvironments: knownEnvironmentsString,
-    //   }
-    // }
-
-    // refreshing the environment and trying to resolve the new environment should hopefully
-    // be sufficient to make the Python extension actually see the new venv
     let knownEnvironments = await refreshPythonEnvironments(pythonApi)
     console.info("Known (refreshed) environments before switch: ", knownEnvironments)
     let resolvedEnvironment = await resolvePythonEnvironment(pythonApi, absolutePythonPath, shortName || pythonPath)
@@ -103,7 +119,7 @@ async function switchInterpreter(pythonPath, shortName) {
       return {
         success: true,
         message: `Switched to ${pythonPath}`,
-        requestedPath: pythonPath
+        requestedPath: pythonPath,
       }
     }
     // Return failure
@@ -113,7 +129,6 @@ async function switchInterpreter(pythonPath, shortName) {
       requestedPath: pythonPath,
       knownEnvironments: formatEnvironmentsAsList(knownEnvironments),
     }
-
   } catch (error) {
     console.error("Error using Python API:", error)
     const errorMessage = `Failed to get Python interpreter. Check that the MS Python extension is loaded, enabled, and activated. Error from API: ${
@@ -144,4 +159,5 @@ function resolveAbsolutePath(requestedPythonPath) {
 
 module.exports = {
   switchInterpreter,
+  setValidStartingInterpreter,
 }

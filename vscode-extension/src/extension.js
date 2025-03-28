@@ -7,6 +7,7 @@
 const vscode = require("vscode")
 const { EXTENSION_NAME, EXTENSION_LOAD_TIME } = require("./utils/constants")
 const { startUnixSocketServer, gracefullyShutdownServer } = require("./unixSocketServer")
+const { setValidStartingInterpreter } = require("./handlers/interpreterHandler")
 
 /** @type {import('net').Server|null} Socket server instance for interpreter switching */
 let server = null
@@ -32,6 +33,9 @@ async function activate(context) {
     context.subscriptions.push({ dispose: deactivate })
 
     vscode.window.showInformationMessage(`${EXTENSION_NAME} extension activated`)
+
+    await setValidStartingInterpreter()
+
   } catch (error) {
     const message = `Failed to start ${EXTENSION_NAME}: ${error.message}`
     console.error(message)
