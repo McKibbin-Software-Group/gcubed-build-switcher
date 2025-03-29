@@ -94,14 +94,14 @@ async function validateStartingPythonInterpreter(pythonApi) {
 
   // Get current active environment
   const activeEnvironmentPath = await pythonApi.environments.getActiveEnvironmentPath()
-  const activeInterpreter = activeEnvironmentPath ? activeEnvironmentPath.path : "none"
   const resolvedEnvironment = await pythonApi.environments.resolveEnvironment(activeEnvironmentPath)
-  console.info(`Current active interpreter: ${activeInterpreter}. Resolves as: `, resolvedEnvironment)
 
+  const activeInterpreterPath = activeEnvironmentPath ? activeEnvironmentPath.path : "none"
+  console.info(`Current active interpreter: ${activeInterpreterPath}. Resolves as: `, resolvedEnvironment)
   if (resolvedEnvironment !== undefined) {
     return { success: true, path: resolvedEnvironment.id, knownVenvs }
   }
-  return { success: false, path: activeInterpreter, knownVenvs }
+  return { success: false, path: activeInterpreterPath, knownVenvs }
 }
 
 /**
