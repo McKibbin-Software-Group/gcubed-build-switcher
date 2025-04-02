@@ -22,7 +22,8 @@
     "UV_LINK_MODE": "copy",
     "GCUBED_ROOT": "${containerWorkspaceFolder}",
     "GCUBED_PYTHON_PREREQUISITES_REPO": "https://github.com/McKibbin-Software-Group/python-gcubed-prerequisites",
-    "GCUBED_CODE_PACKAGE_NAME": "gcubed"
+    "GCUBED_CODE_PACKAGE_NAME": "gcubed",
+    "RICH_TRACEBACKS": "1"
   },
   "portsAttributes": {
     "8888": {
@@ -148,5 +149,5 @@
   // Install any base prerequisites. Note - uv will install anything in requirements.txt to the system context. Assuming
   // this is needed in all cases.  Otherwise you should install requirements into the appropriate venv.
   // "postCreateCommand": "npm install && if [ -f requirements.txt ]; then sudo uv pip install --system -r requirements.txt; fi"
-  "postCreateCommand": "if [ -f requirements.txt ]; then sudo $(which uv) pip install --system -r requirements.txt; fi; if [ -f pyproject.toml ]; then sudo $(which uv) pip install --system -r pyproject.toml; fi;echo 'alias ll=\"ls -alh\"' >> ~/.bashrc; echo 'cd() { if [ \"$#\" -eq 0 ]; then command cd \"${containerWorkspaceFolder}\"; else command cd \"$@\"; fi; }' >> ~/.bashrc"
+  "postCreateCommand": "if [ -f requirements.txt ]; then sudo $(which uv) pip install --system -r requirements.txt; fi; if [ -f pyproject.toml ]; then sudo $(which uv) pip install --system -e .; fi;echo 'alias ll=\"ls -alh\"' >> ~/.bashrc; echo 'cd() { if [ \"$#\" -eq 0 ]; then command cd \"${containerWorkspaceFolder}\"; else command cd \"$@\"; fi; }' >> ~/.bashrc"
 }
