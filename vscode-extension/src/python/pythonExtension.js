@@ -81,10 +81,7 @@ async function getPythonExtensionWithRetry({ maxRetries = 0, delayMs = 3000 } = 
  * @param {string} displayName - Display name for notification (optional)
  * @returns {Promise<void>}
  */
-async function switchPythonEnvironment(pythonApi, absolutePath, displayName) {
-  const message = `Switching venv to: '${displayName || absolutePath}'`
-  console.log(message)
-  vscode.window.showInformationMessage(message)
+async function switchPythonEnvironment(pythonApi, absolutePath) {
   return await pythonApi.environments.updateActiveEnvironmentPath(absolutePath)
 }
 

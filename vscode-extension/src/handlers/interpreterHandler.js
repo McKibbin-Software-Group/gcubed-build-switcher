@@ -121,9 +121,17 @@ async function switchInterpreter(pythonPath, shortName) {
   }
 
   try {
-    // Resolve absolute path
+    // resolveAbsolutePath just builds an absolute path if given a relative path
+    // It does not check for files on disk. This is currently sufficient as the only entry to this
+    // extension is via the Python component, and that only invokes this extension if it has
+    // successfully built the path in the first place (so no need to double-check).
+    // The issue we're trying to overcome with this piece of code is that the vscode Python
+    // extension sometimes doesn't recognise a new virtual environment (ie one just build by the
+    // Python part). Kicking it a few times is often sufficient to wake it up and make it
+    // recognise a new venv.
+
     const absolutePythonPath = resolveAbsolutePath(pythonPath)
-    console.info(`Switching interpreter: ${pythonPath}, resolves to: ${absolutePythonPath}`)
+    console.info(`Activating interpreter: ${pythonPath} (resolves to: ${absolutePythonPath})`)
 
     // Get Python API
     const pythonApi = await getPythonApi()
@@ -134,7 +142,11 @@ async function switchInterpreter(pythonPath, shortName) {
     console.info("Resolved environment before switch: ", resolvedEnvironment)
 
     // Try to switch interpreter regardless of whether or not the Python extension thinks it can see it
-    await switchPythonEnvironment(pythonApi, absolutePythonPath, shortName || pythonPath)
+    const message = `Activating: '${shortName || pythonPath}'`
+    console.log(message)
+    vscode.window.showInformationMessage(message)
+
+    await switchPythonEnvironment(pythonApi, absolutePythonPath)
 
     // and refresh/resolve again to get the best chance that we actually know if the environment actually switched...
     knownEnvironments = await refreshPythonEnvironments(pythonApi)
@@ -144,6 +156,9 @@ async function switchInterpreter(pythonPath, shortName) {
 
     if (resolvedEnvironment !== undefined) {
       // Return success
+      const message = `Successfully activated: '${shortName || pythonPath}'`
+      console.log(message)
+      vscode.window.showInformationMessage(message)
       return {
         success: true,
         message: `Switched to ${pythonPath}`,
