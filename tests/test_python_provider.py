@@ -17,6 +17,7 @@ if SRC_ROOT not in sys.path:
     sys.path.insert(0, SRC_ROOT)
 
 from gcubed_build_switcher import python_provider
+from gcubed_build_switcher import config
 from gcubed_build_switcher import venv as switcher_venv
 
 
@@ -36,6 +37,43 @@ def create_fake_python(path, version):
 
 
 class PythonProviderTests(unittest.TestCase):
+    def test_python_install_root_defaults_under_user_home(self):
+        with tempfile.TemporaryDirectory() as home_dir:
+            with mock.patch.dict(os.environ, {"HOME": home_dir}, clear=True):
+                install_root = config.get_python_install_root()
+
+            self.assertEqual(
+                install_root,
+                os.path.join(home_dir, ".gcubed", "python-builds", "pyenv"),
+            )
+
+    def test_python_install_root_env_override_wins(self):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "GCUBED_ROOT": "/tmp/gcubed-root",
+                "GCUBED_PYTHON_INSTALL_ROOT": "/opt/gcubed/python-builds/pyenv",
+            },
+            clear=True,
+        ):
+            install_root = config.get_python_install_root()
+
+        self.assertEqual(install_root, "/opt/gcubed/python-builds/pyenv")
+
+    def test_python_install_root_expands_user_override(self):
+        with tempfile.TemporaryDirectory() as home_dir:
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "HOME": home_dir,
+                    "GCUBED_PYTHON_INSTALL_ROOT": "~/custom-python-cache",
+                },
+                clear=True,
+            ):
+                install_root = config.get_python_install_root()
+
+        self.assertEqual(install_root, os.path.join(home_dir, "custom-python-cache"))
+
     def test_validate_python_executable_requires_exact_patch_version(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             python_path = create_fake_python(

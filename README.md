@@ -57,3 +57,9 @@ Python unit tests can be run with:
 ```bash
 python3 -m unittest discover -s tests -v
 ```
+
+When `.python-version` requests a Python version that is not already available,
+prebuilt Python archives are cached under
+`~/.gcubed/python-builds/pyenv` by default. Set
+`GCUBED_PYTHON_INSTALL_ROOT` to use a shared/pre-provisioned location such as
+`/opt/gcubed/python-builds/pyenv`.

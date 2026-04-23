@@ -16,7 +16,7 @@ VENV_NAME_PREFIX = get_optional_env_var("GCUBED_VENV_NAME_PREFIX", "venv_gcubed_
 
 RICH_TRACEBACK_ENABLED = get_optional_env_var("RICH_TRACEBACKS")
 
-DEFAULT_PYTHON_INSTALL_ROOT = "/opt/gcubed/python-builds/pyenv"
+DEFAULT_PYTHON_INSTALL_ROOT = "~/.gcubed/python-builds/pyenv"
 DEFAULT_PYTHON_PREBUILT_MANIFEST_URL = (
     "https://github.com/AshieSlashy/gcubed-python-builds/releases/download/"
     "python-builds-latest/manifest.json"
@@ -70,10 +70,11 @@ def get_prerequisites_repo_url():
 
 def get_python_install_root():
     """Get the root directory for cached MSG Python builds."""
-    return get_optional_env_var(
-        "GCUBED_PYTHON_INSTALL_ROOT",
-        DEFAULT_PYTHON_INSTALL_ROOT,
-    )
+    configured_root = get_optional_env_var("GCUBED_PYTHON_INSTALL_ROOT")
+    if configured_root:
+        return os.path.expanduser(configured_root)
+
+    return os.path.expanduser(DEFAULT_PYTHON_INSTALL_ROOT)
 
 def get_python_prebuilt_manifest_url():
     """Get the manifest URL for MSG prebuilt Python archives."""
