@@ -63,3 +63,7 @@ prebuilt Python archives are cached under
 `~/.gcubed/python-builds/pyenv` by default. Set
 `GCUBED_PYTHON_INSTALL_ROOT` to use a shared/pre-provisioned location such as
 `/opt/gcubed/python-builds/pyenv`.
+
+If prebuilt Python release assets are republished, remove the affected cached
+version directory, for example
+`~/.gcubed/python-builds/pyenv/versions/3.13.11`, before retrying.

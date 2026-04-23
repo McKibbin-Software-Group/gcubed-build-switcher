@@ -104,6 +104,12 @@ def remove_directory_tree(directory_to_delete, message):
     return False
 
 
+def get_uv_env():
+    env = os.environ.copy()
+    env["UV_LINK_MODE"] = "copy"
+    return env
+
+
 def activate_rich_formatter(venv_path):
     """
     Configures Rich traceback handling for the virtual environment.
@@ -270,7 +276,7 @@ def create_venv_for_build(build_tag):
         else:
             print("No specific Python version requested")
 
-        subprocess.run(venv_cmd, cwd=gcubed_root, check=True)
+        subprocess.run(venv_cmd, cwd=gcubed_root, check=True, env=get_uv_env())
 
         # Get Python interpreter path
         python_path = os.path.join(venv_path, "bin", "python")

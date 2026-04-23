@@ -96,6 +96,26 @@ class PythonProviderTests(unittest.TestCase):
             self.assertEqual(reported, "3.13.11")
             self.assertIn("expected 3.13.10", message)
 
+    def test_validate_python_executable_scrubs_python_environment(self):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "PYTHONHOME": "/bad/pythonhome",
+                "PYTHONPATH": "/bad/pythonpath",
+                "LD_LIBRARY_PATH": "/bad/ld",
+                "DYLD_LIBRARY_PATH": "/bad/dyld",
+                "PATH": os.environ.get("PATH", ""),
+            },
+            clear=True,
+        ):
+            validation_env = python_provider.get_python_validation_env()
+
+        self.assertNotIn("PYTHONHOME", validation_env)
+        self.assertNotIn("PYTHONPATH", validation_env)
+        self.assertNotIn("LD_LIBRARY_PATH", validation_env)
+        self.assertNotIn("DYLD_LIBRARY_PATH", validation_env)
+        self.assertIn("PATH", validation_env)
+
     def test_cache_provider_returns_existing_valid_interpreter(self):
         with tempfile.TemporaryDirectory() as install_root:
             version = "3.13.11"
@@ -371,8 +391,8 @@ class PythonProviderTests(unittest.TestCase):
 
             commands = []
 
-            def fake_run(cmd, cwd=None, check=False, **_kwargs):
-                commands.append((cmd, cwd, check))
+            def fake_run(cmd, cwd=None, check=False, env=None, **_kwargs):
+                commands.append((cmd, cwd, check, env))
 
             with mock.patch(
                 "gcubed_build_switcher.venv.validate_build_tag",
@@ -397,20 +417,22 @@ class PythonProviderTests(unittest.TestCase):
 
             self.assertTrue(result)
             venv_commands = [
-                command
-                for command, _cwd, _check in commands
+                (command, env)
+                for command, _cwd, _check, env in commands
                 if command[:2] == ["uv", "venv"]
             ]
             self.assertEqual(len(venv_commands), 1)
-            self.assertIn("--python", venv_commands[0])
+            venv_command, venv_env = venv_commands[0]
+            self.assertIn("--python", venv_command)
             self.assertEqual(
-                venv_commands[0][venv_commands[0].index("--python") + 1],
+                venv_command[venv_command.index("--python") + 1],
                 "/tmp/gcubed-python",
             )
+            self.assertEqual(venv_env["UV_LINK_MODE"], "copy")
             self.assertFalse(
                 any(
                     command[:3] == ["uv", "python", "install"]
-                    for command, _cwd, _check in commands
+                    for command, _cwd, _check, _env in commands
                 )
             )
 

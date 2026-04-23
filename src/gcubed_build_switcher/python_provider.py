@@ -25,6 +25,12 @@ VERSION_CHECK_CODE = (
 )
 EXACT_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 VERSION_IN_PATH_RE = re.compile(r"(?<!\d)(\d+\.\d+\.\d+)(?!\d)")
+PYTHON_VALIDATION_ENV_VARS_TO_CLEAR = (
+    "PYTHONHOME",
+    "PYTHONPATH",
+    "LD_LIBRARY_PATH",
+    "DYLD_LIBRARY_PATH",
+)
 
 
 class PythonProviderError(Exception):
@@ -445,6 +451,7 @@ def validate_python_executable(python_path, expected_version=None):
             stderr=subprocess.PIPE,
             universal_newlines=True,
             timeout=10,
+            env=get_python_validation_env(),
         )
     except Exception as e:
         return False, absolute_path, None, "Could not run {}: {}".format(
@@ -472,6 +479,13 @@ def validate_python_executable(python_path, expected_version=None):
         )
 
     return True, absolute_path, reported_version, None
+
+
+def get_python_validation_env():
+    env = os.environ.copy()
+    for name in PYTHON_VALIDATION_ENV_VARS_TO_CLEAR:
+        env.pop(name, None)
+    return env
 
 
 def fetch_json_url(url, timeout_seconds):
