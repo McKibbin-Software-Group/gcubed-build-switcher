@@ -53,3 +53,7 @@ If testing locally in the dev environment:
 python -m src.gcubed_build_switcher.cli [build_tag]
 ```
 
+Python unit tests can be run with:
+```bash
+python3 -m unittest discover -s tests -v
+```
