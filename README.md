@@ -67,3 +67,7 @@ prebuilt Python archives are cached under
 If prebuilt Python release assets are republished, remove the affected cached
 version directory, for example
 `~/.gcubed/python-builds/pyenv/versions/3.13.11`, before retrying.
+
+Generated build virtual environments install `gcubed-build-switcher` directly so
+model scripts can continue to switch builds after VS Code changes to a
+build-specific Python interpreter.

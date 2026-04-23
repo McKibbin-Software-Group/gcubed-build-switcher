@@ -407,6 +407,9 @@ class PythonProviderTests(unittest.TestCase):
                 "gcubed_build_switcher.venv.install_packages",
                 return_value=True,
             ), mock.patch(
+                "gcubed_build_switcher.venv.ensure_runtime_support_packages",
+                return_value=True,
+            ), mock.patch(
                 "gcubed_build_switcher.venv.subprocess.run",
                 side_effect=fake_run,
             ), mock.patch(
@@ -435,6 +438,73 @@ class PythonProviderTests(unittest.TestCase):
                     for command, _cwd, _check, _env in commands
                 )
             )
+
+    def test_runtime_support_install_installs_switcher_when_missing(self):
+        commands = []
+        show_calls = []
+
+        def fake_run(cmd, cwd=None, check=False, **_kwargs):
+            commands.append((cmd, cwd, check))
+            if cmd[:4] == ["uv", "pip", "show", "-p"]:
+                show_calls.append(cmd)
+                if len(show_calls) == 1:
+                    raise switcher_venv.subprocess.CalledProcessError(1, cmd)
+
+        with mock.patch(
+            "gcubed_build_switcher.venv.subprocess.run",
+            side_effect=fake_run,
+        ), mock.patch(
+            "gcubed_build_switcher.venv.get_build_switcher_install_target",
+            return_value="gcubed-build-switcher-test-spec",
+        ), mock.patch(
+            "sys.stdout",
+            new=io.StringIO(),
+        ):
+            result = switcher_venv.ensure_runtime_support_packages(
+                "/tmp/venv/bin/python",
+                "/tmp/gcubed-root",
+            )
+
+        self.assertTrue(result)
+        install_commands = [
+            command
+            for command, _cwd, _check in commands
+            if command[:4] == ["uv", "pip", "install", "-p"]
+        ]
+        self.assertEqual(len(install_commands), 1)
+        self.assertEqual(install_commands[0][-1], "gcubed-build-switcher-test-spec")
+
+    def test_prepare_existing_venv_repairs_runtime_support_before_activation(self):
+        with tempfile.TemporaryDirectory() as gcubed_root:
+            venv_path = os.path.join(gcubed_root, "venv_gcubed_build-tag")
+            os.makedirs(os.path.join(venv_path, "bin"))
+
+            with mock.patch(
+                "gcubed_build_switcher.venv.get_venv_directory_for_build",
+                return_value=venv_path,
+            ), mock.patch(
+                "gcubed_build_switcher.venv.verify_venv_has_gcubed",
+                return_value=True,
+            ), mock.patch(
+                "gcubed_build_switcher.venv.get_gcubed_root",
+                return_value=gcubed_root,
+            ), mock.patch(
+                "gcubed_build_switcher.venv.ensure_runtime_support_packages",
+                return_value=True,
+            ) as ensure_support, mock.patch(
+                "gcubed_build_switcher.venv.activate_rich_formatter",
+            ) as activate_rich, mock.patch(
+                "sys.stdout",
+                new=io.StringIO(),
+            ):
+                result = switcher_venv.prepare_local_venv("build-tag")
+
+            self.assertTrue(result)
+            ensure_support.assert_called_once_with(
+                os.path.join(venv_path, "bin", "python"),
+                gcubed_root,
+            )
+            activate_rich.assert_called_once_with(venv_path)
 
 
 if __name__ == "__main__":

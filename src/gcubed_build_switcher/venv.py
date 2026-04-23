@@ -11,6 +11,7 @@ from .config import (
     get_gcubed_root,
     get_package_name,
     get_prerequisites_repo_url,
+    get_build_switcher_install_spec,
     ConfigurationError,
 )
 from .packages import install_packages
@@ -64,7 +65,7 @@ def verify_venv_has_gcubed(venv_path):
     if venv_path is False:
         return False
 
-    python_path = os.path.join(venv_path, "bin", "python")
+    python_path = get_venv_python_path(venv_path)
 
     # Check if requested venv exists
     if not os.path.exists(python_path):
@@ -108,6 +109,69 @@ def get_uv_env():
     env = os.environ.copy()
     env["UV_LINK_MODE"] = "copy"
     return env
+
+
+def get_venv_python_path(venv_path):
+    return os.path.join(venv_path, "bin", "python")
+
+
+def find_local_project_root():
+    candidate = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
+    )
+    pyproject_path = os.path.join(candidate, "pyproject.toml")
+    package_path = os.path.join(candidate, "src", "gcubed_build_switcher")
+
+    if os.path.exists(pyproject_path) and os.path.isdir(package_path):
+        return candidate
+    return None
+
+
+def get_build_switcher_install_target():
+    local_project_root = find_local_project_root()
+    if local_project_root:
+        return local_project_root
+    return get_build_switcher_install_spec()
+
+
+def venv_has_runtime_support_packages(python_path):
+    try:
+        subprocess.run(
+            ["uv", "pip", "show", "-p", python_path, "gcubed-build-switcher", "rich"],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=get_uv_env(),
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
+def ensure_runtime_support_packages(python_path, gcubed_root):
+    """
+    Ensure generated venvs can import the switcher after VS Code activates them.
+
+    Build venvs may use an exact prebuilt Python that cannot see packages installed
+    into the devcontainer's global Python, so install this support package directly.
+    """
+    if venv_has_runtime_support_packages(python_path):
+        return True
+
+    install_target = get_build_switcher_install_target()
+    print("Installing G-Cubed build switcher support package into virtual environment...")
+
+    try:
+        subprocess.run(
+            ["uv", "pip", "install", "-p", python_path, install_target],
+            cwd=gcubed_root,
+            check=True,
+            env=get_uv_env(),
+        )
+        return venv_has_runtime_support_packages(python_path)
+    except subprocess.CalledProcessError as e:
+        print(f"Error installing G-Cubed build switcher support package: {e}")
+        return False
 
 
 def activate_rich_formatter(venv_path):
@@ -279,7 +343,7 @@ def create_venv_for_build(build_tag):
         subprocess.run(venv_cmd, cwd=gcubed_root, check=True, env=get_uv_env())
 
         # Get Python interpreter path
-        python_path = os.path.join(venv_path, "bin", "python")
+        python_path = get_venv_python_path(venv_path)
 
         # Find files to install
         wheel_files = glob.glob(os.path.join(temp_dir_path, "*.whl"))
@@ -304,6 +368,12 @@ def create_venv_for_build(build_tag):
             "-r",
         ):
             raise RuntimeError(f"Failed to install requirements for build {build_tag}")
+
+        if not ensure_runtime_support_packages(python_path, gcubed_root):
+            raise RuntimeError(
+                "Failed to install build switcher support package for build "
+                f"{build_tag}"
+            )
 
         return True
 
@@ -340,6 +410,18 @@ def prepare_local_venv(build_tag):
     print(f"Verifying '{venv_name}' exists and has the gcubed module installed...")
     result = verify_venv_has_gcubed(venv_path)
     if result:
+        try:
+            gcubed_root = get_gcubed_root()
+        except ConfigurationError as e:
+            print(str(e))
+            return False
+
+        if not ensure_runtime_support_packages(
+            get_venv_python_path(venv_path),
+            gcubed_root,
+        ):
+            return False
+
         # If all good, then activate rich formatter
         activate_rich_formatter(venv_path)
         return True
