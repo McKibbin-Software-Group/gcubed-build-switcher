@@ -1,7 +1,7 @@
 import os
 import json
 import socket
-from .venv import get_venv_name, get_venv_directory_for_build
+from .venv import get_venv_name, try_get_venv_directory_for_build
 from .config import (
     VSCODE_VENV_SWITCHER_API_TIMEOUT_SECONDS,
     VSCODE_VENV_SOCKET_PATH,
@@ -20,7 +20,10 @@ def set_vscode_python_interpreter(build_tag):
         bool: True if successful, False otherwise
     """
     venv_name = get_venv_name(build_tag)
-    full_path = get_venv_directory_for_build(venv_name)
+    full_path = try_get_venv_directory_for_build(venv_name)
+    if not full_path:
+        return False
+
     python_path = os.path.join(full_path, "bin", "python")
 
     print(f"Trying to switch python interpreter to: {python_path}")

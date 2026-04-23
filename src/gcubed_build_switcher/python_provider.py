@@ -10,6 +10,7 @@ import tarfile
 import tempfile
 import time
 import urllib.request
+from typing import Optional
 
 from .config import (
     DEFAULT_PYTHON_PROVIDER_ORDER,
@@ -39,13 +40,18 @@ class PythonProviderError(Exception):
 
 
 class ProviderResult(object):
-    def __init__(self, ok, path=None, message=None):
+    def __init__(
+        self,
+        ok: bool,
+        path: Optional[str] = None,
+        message: Optional[str] = None,
+    ):
         self.ok = ok
         self.path = path
         self.message = message
 
 
-def ensure_python_available(python_request):
+def ensure_python_available(python_request: str) -> str:
     """
     Resolve a requested Python version or absolute interpreter path.
 
@@ -93,8 +99,11 @@ def ensure_python_available(python_request):
                 message="Unknown provider '{}'.".format(provider_name),
             )
 
-        if result.ok:
+        if result.ok and result.path is not None:
             return result.path
+        if result.ok:
+            failures.append("{}: provider returned no path".format(provider_name))
+            continue
         if result.message:
             failures.append("{}: {}".format(provider_name, result.message))
 

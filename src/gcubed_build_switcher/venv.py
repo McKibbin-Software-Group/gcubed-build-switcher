@@ -3,6 +3,7 @@ import sys
 import subprocess
 import shutil
 import glob
+from typing import Optional
 
 from .config import (
     VENV_NAME_PREFIX,
@@ -31,7 +32,7 @@ def get_venv_name(gcubed_code_build_tag):
     return f"{VENV_NAME_PREFIX}{gcubed_code_build_tag}"
 
 
-def get_venv_directory_for_build(venv_name):
+def try_get_venv_directory_for_build(venv_name: str) -> Optional[str]:
     """
     Get the directory path for a virtual environment.
 
@@ -39,17 +40,27 @@ def get_venv_directory_for_build(venv_name):
         venv_name (str): Name of the virtual environment
 
     Returns:
-        str: Path to the virtual environment or False if GCUBED_ROOT not set
+        str: Path to the virtual environment or None if GCUBED_ROOT is not set
     """
     try:
         gcubed_root = get_gcubed_root()
         return os.path.join(gcubed_root, venv_name)
     except ConfigurationError as e:
         print(str(e))
-        return False
+        return None
 
 
-def verify_venv_has_gcubed(venv_path):
+def get_venv_directory_for_build(venv_name: str):
+    """
+    Get the directory path for a virtual environment.
+
+    Returns a path string, or False for legacy callers that treat a missing
+    configuration as a failed venv lookup.
+    """
+    return try_get_venv_directory_for_build(venv_name) or False
+
+
+def verify_venv_has_gcubed(venv_path: Optional[str]) -> bool:
     """
     Checks for the existence of the requested venv and
     confirm that gcubed is installed in it.
@@ -62,7 +73,7 @@ def verify_venv_has_gcubed(venv_path):
               Note - special case if we get an exception looking for the package
     """
     # For error bubbling
-    if venv_path is False:
+    if not venv_path:
         return False
 
     python_path = get_venv_python_path(venv_path)
@@ -87,9 +98,10 @@ def verify_venv_has_gcubed(venv_path):
         print(str(e))
         sys.exit(1)
     except subprocess.CalledProcessError as e:
-        # NOTE: DO NOT DELETE THE VENV IF THE PACKAGE IS NOT FOUND - IT MAY BE THERE FOR OTHER REASONS
+        # Do not delete the venv if the package is missing; it may be useful.
         print(
-            f"Error looking for prerequisite package '{gcubed_package_name}' in virtual environment: {e}."
+            "Error looking for prerequisite package "
+            f"'{gcubed_package_name}' in virtual environment: {e}."
         )
         return False
 
@@ -111,11 +123,11 @@ def get_uv_env():
     return env
 
 
-def get_venv_python_path(venv_path):
+def get_venv_python_path(venv_path: str) -> str:
     return os.path.join(venv_path, "bin", "python")
 
 
-def find_local_project_root():
+def find_local_project_root() -> Optional[str]:
     candidate = os.path.abspath(
         os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
     )
@@ -127,17 +139,25 @@ def find_local_project_root():
     return None
 
 
-def get_build_switcher_install_target():
+def get_build_switcher_install_target() -> str:
     local_project_root = find_local_project_root()
     if local_project_root:
         return local_project_root
     return get_build_switcher_install_spec()
 
 
-def venv_has_runtime_support_packages(python_path):
+def venv_has_runtime_support_packages(python_path: str) -> bool:
     try:
         subprocess.run(
-            ["uv", "pip", "show", "-p", python_path, "gcubed-build-switcher", "rich"],
+            [
+                "uv",
+                "pip",
+                "show",
+                "-p",
+                python_path,
+                "gcubed-build-switcher",
+                "rich",
+            ],
             check=True,
             capture_output=True,
             text=True,
@@ -148,7 +168,7 @@ def venv_has_runtime_support_packages(python_path):
         return False
 
 
-def ensure_runtime_support_packages(python_path, gcubed_root):
+def ensure_runtime_support_packages(python_path: str, gcubed_root: str) -> bool:
     """
     Ensure generated venvs can import the switcher after VS Code activates them.
 
@@ -159,7 +179,10 @@ def ensure_runtime_support_packages(python_path, gcubed_root):
         return True
 
     install_target = get_build_switcher_install_target()
-    print("Installing G-Cubed build switcher support package into virtual environment...")
+    print(
+        "Installing G-Cubed build switcher support package "
+        "into virtual environment..."
+    )
 
     try:
         subprocess.run(
@@ -178,8 +201,9 @@ def activate_rich_formatter(venv_path):
     """
     Configures Rich traceback handling for the virtual environment.
 
-    When RICH_TRACEBACK_ENABLED is True, finds the appropriate site-packages directory
-    and creates/overwrites the sitecustomize.py file to install Rich traceback formatter.
+    When RICH_TRACEBACK_ENABLED is True, finds the appropriate site-packages
+    directory and creates/overwrites the sitecustomize.py file to install Rich
+    traceback formatter.
     Otherwise, removes the file if it exists.
 
     Args:
@@ -195,7 +219,8 @@ def activate_rich_formatter(venv_path):
 
     if not site_packages_dirs:
         print(
-            "Warning: Could not find site-packages directory in virtual environment - cannot activate Rich traceback formatter"
+            "Warning: Could not find site-packages directory in virtual "
+            "environment - cannot activate Rich traceback formatter"
         )
         return
 
@@ -218,7 +243,8 @@ def activate_rich_formatter(venv_path):
 
         with open(customize_file, "w") as f:
             f.write(
-                f"{existing_content}from rich.traceback import install\ninstall(show_locals=False)"
+                f"{existing_content}from rich.traceback import install\n"
+                "install(show_locals=False)"
             )
         print("Rich traceback formatter has been enabled")
 
@@ -294,7 +320,8 @@ def validate_build_tag(build_tag):
         return False, None
     except subprocess.CalledProcessError:
         print(
-            f"Error: Build tag '{build_tag}' does not exist in the prerequisites repository."
+            f"Error: Build tag '{build_tag}' does not exist in the "
+            "prerequisites repository."
         )
         # Clean up temp directory if it was created
         remove_directory_tree(temp_dir_path, "Cleaning up temp directory")
@@ -404,7 +431,9 @@ def prepare_local_venv(build_tag):
         bool: True if activation successful, False otherwise
     """
     venv_name = get_venv_name(build_tag)
-    venv_path = get_venv_directory_for_build(venv_name)
+    venv_path = try_get_venv_directory_for_build(venv_name)
+    if venv_path is None:
+        return False
 
     # Verify existing venv first
     print(f"Verifying '{venv_name}' exists and has the gcubed module installed...")

@@ -1,7 +1,18 @@
 import os
+from typing import Optional, overload
 
 
-def get_optional_env_var(name, default=None):
+@overload
+def get_optional_env_var(name: str) -> Optional[str]:
+    ...
+
+
+@overload
+def get_optional_env_var(name: str, default: str) -> str:
+    ...
+
+
+def get_optional_env_var(name: str, default: Optional[str] = None) -> Optional[str]:
     """Get an optional environment variable with default."""
     return os.environ.get(name, default)
 
@@ -11,7 +22,10 @@ DEFAULT_TEMP_DIR_SUFFIX = "temp"
 VSCODE_VENV_SWITCHER_API_ACTION = "set-interpreter"
 VSCODE_VENV_SWITCHER_API_TIMEOUT_SECONDS = 6
 
-VSCODE_VENV_SOCKET_PATH = get_optional_env_var("GCUBED_VENV_SOCKET_PATH", "/tmp/gcubed_venv_switcher.sock")
+VSCODE_VENV_SOCKET_PATH = get_optional_env_var(
+    "GCUBED_VENV_SOCKET_PATH",
+    "/tmp/gcubed_venv_switcher.sock",
+)
 VENV_NAME_PREFIX = get_optional_env_var("GCUBED_VENV_NAME_PREFIX", "venv_gcubed_")
 
 RICH_TRACEBACK_ENABLED = get_optional_env_var("RICH_TRACEBACKS")
@@ -32,7 +46,8 @@ class ConfigurationError(Exception):
     """Exception raised for configuration errors."""
     pass
 
-def get_required_env_var(name, error_message=None):
+
+def get_required_env_var(name: str, error_message: Optional[str] = None) -> str:
     """Get a required environment variable or exit with error."""
     value = os.environ.get(name)
     if not value:
@@ -43,7 +58,8 @@ def get_required_env_var(name, error_message=None):
         raise ConfigurationError(msg)
     return value
 
-def is_feature_disabled(feature_name):
+
+def is_feature_disabled(feature_name: str) -> bool:
     """
       The environment variable name is formatted as GCUBED_CODE_<feature_name>_DISABLED.
       The variable can have any value; it just has to exist to disable the feature.
@@ -57,22 +73,27 @@ def is_feature_disabled(feature_name):
     environment_variable = f"GCUBED_CODE_{feature_name}_DISABLED"
     print(f"Checking environment variable {environment_variable}")
     feature_is_disabled = os.environ.get(environment_variable) is not None
-    print(f"Feature {feature_name} is {'disabled' if feature_is_disabled else 'enabled'}")
+    status = "disabled" if feature_is_disabled else "enabled"
+    print(f"Feature {feature_name} is {status}")
     return bool(feature_is_disabled)
 
-def get_gcubed_root():
+
+def get_gcubed_root() -> str:
     """Get the G-Cubed root directory from environment."""
     return get_required_env_var("GCUBED_ROOT")
 
-def get_package_name():
+
+def get_package_name() -> str:
     """Get the G-Cubed code package name."""
     return get_required_env_var("GCUBED_CODE_PACKAGE_NAME")
 
-def get_prerequisites_repo_url():
+
+def get_prerequisites_repo_url() -> str:
     """Get the URL for the prerequisites repository."""
     return get_required_env_var("GCUBED_PYTHON_PREREQUISITES_REPO")
 
-def get_python_install_root():
+
+def get_python_install_root() -> str:
     """Get the root directory for cached MSG Python builds."""
     configured_root = get_optional_env_var("GCUBED_PYTHON_INSTALL_ROOT")
     if configured_root:
@@ -80,14 +101,16 @@ def get_python_install_root():
 
     return os.path.expanduser(DEFAULT_PYTHON_INSTALL_ROOT)
 
-def get_python_prebuilt_manifest_url():
+
+def get_python_prebuilt_manifest_url() -> str:
     """Get the manifest URL for MSG prebuilt Python archives."""
     return get_optional_env_var(
         "GCUBED_PYTHON_PREBUILT_MANIFEST_URL",
         DEFAULT_PYTHON_PREBUILT_MANIFEST_URL,
     )
 
-def get_python_download_timeout_seconds():
+
+def get_python_download_timeout_seconds() -> int:
     """Get the timeout for Python manifest/archive downloads."""
     value = get_optional_env_var("GCUBED_PYTHON_DOWNLOAD_TIMEOUT_SECONDS")
     if value is None:
@@ -102,16 +125,18 @@ def get_python_download_timeout_seconds():
         return DEFAULT_PYTHON_DOWNLOAD_TIMEOUT_SECONDS
     return timeout
 
-def get_python_provider_order():
+
+def get_python_provider_order() -> str:
     """Get the ordered Python provider chain."""
     return get_optional_env_var(
         "GCUBED_PYTHON_PROVIDER_ORDER",
         DEFAULT_PYTHON_PROVIDER_ORDER,
     )
 
-def get_build_switcher_install_spec():
+
+def get_build_switcher_install_spec() -> str:
     """Get the package spec used to install the switcher into generated venvs."""
     return get_optional_env_var(
         "GCUBED_BUILD_SWITCHER_INSTALL_SPEC",
         DEFAULT_BUILD_SWITCHER_INSTALL_SPEC,
-    )
+    ) or DEFAULT_BUILD_SWITCHER_INSTALL_SPEC

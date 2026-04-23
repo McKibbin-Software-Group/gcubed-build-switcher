@@ -209,8 +209,12 @@ class PythonProviderTests(unittest.TestCase):
                 "manifest_reachable": False,
                 "matching_archive_found": False,
             }
+            manifest_url_getter = (
+                "gcubed_build_switcher.python_provider."
+                "get_python_prebuilt_manifest_url"
+            )
             with mock.patch(
-                "gcubed_build_switcher.python_provider.get_python_prebuilt_manifest_url",
+                manifest_url_getter,
                 return_value=file_url(manifest_path),
             ):
                 result = python_provider.prebuilt_provider(
@@ -266,8 +270,12 @@ class PythonProviderTests(unittest.TestCase):
                 "manifest_reachable": False,
                 "matching_archive_found": False,
             }
+            manifest_url_getter = (
+                "gcubed_build_switcher.python_provider."
+                "get_python_prebuilt_manifest_url"
+            )
             with mock.patch(
-                "gcubed_build_switcher.python_provider.get_python_prebuilt_manifest_url",
+                manifest_url_getter,
                 return_value=file_url(manifest_path),
             ):
                 result = python_provider.prebuilt_provider(
@@ -333,8 +341,12 @@ class PythonProviderTests(unittest.TestCase):
             with open(manifest_path, "w") as f:
                 json.dump(manifest, f)
 
+            manifest_url_getter = (
+                "gcubed_build_switcher.python_provider."
+                "get_python_prebuilt_manifest_url"
+            )
             with mock.patch(
-                "gcubed_build_switcher.python_provider.get_python_prebuilt_manifest_url",
+                manifest_url_getter,
                 return_value=file_url(manifest_path),
             ):
                 result = python_provider.prebuilt_provider(
@@ -368,7 +380,10 @@ class PythonProviderTests(unittest.TestCase):
             "3.10.13",
             {
                 "platform": "linux-x86_64-glibc",
-                "cache_path": "/opt/gcubed/python-builds/pyenv/versions/3.10.13/bin/python",
+                "cache_path": (
+                    "/opt/gcubed/python-builds/pyenv/versions/"
+                    "3.10.13/bin/python"
+                ),
                 "manifest_reachable": True,
                 "matching_archive_found": False,
             },
@@ -480,7 +495,7 @@ class PythonProviderTests(unittest.TestCase):
             os.makedirs(os.path.join(venv_path, "bin"))
 
             with mock.patch(
-                "gcubed_build_switcher.venv.get_venv_directory_for_build",
+                "gcubed_build_switcher.venv.try_get_venv_directory_for_build",
                 return_value=venv_path,
             ), mock.patch(
                 "gcubed_build_switcher.venv.verify_venv_has_gcubed",
