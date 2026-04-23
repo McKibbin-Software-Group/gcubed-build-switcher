@@ -71,6 +71,7 @@ def verify_venv_has_gcubed(venv_path):
         return False
 
     # Check if the gcubed package is installed in that venv
+    gcubed_package_name = ""
     try:
         gcubed_package_name = get_package_name()
 
@@ -188,6 +189,7 @@ def validate_build_tag(build_tag):
     Returns:
         tuple: (bool, temp_dir_path) indicating success and path to temp clone
     """
+    temp_dir_path = ""
     try:
         gcubed_root = get_gcubed_root()
         repo_url = get_prerequisites_repo_url()
@@ -219,7 +221,7 @@ def validate_build_tag(build_tag):
     except ConfigurationError as e:
         print(str(e))
         return False, None
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         print(
             f"Error: Build tag '{build_tag}' does not exist in the prerequisites repository."
         )
@@ -242,19 +244,30 @@ def create_venv_for_build(build_tag):
     is_valid, temp_dir_path = validate_build_tag(build_tag)
     if not is_valid:
         return False
+    assert temp_dir_path is not None
 
+    venv_path = ""
     try:
         gcubed_root = get_gcubed_root()
         venv_name = get_venv_name(build_tag)
         venv_path = os.path.join(gcubed_root, venv_name)
 
         # Create new venv only after validating the build tag
+        python_version_file = os.path.join(temp_dir_path, ".python-version")
+        python_version = None
+        if os.path.exists(python_version_file):
+            with open(python_version_file) as f:
+                python_version = f.read().strip()
+
         print(f"Creating virtual environment for build {build_tag}...")
-        subprocess.run(
-            ["uv", "venv", "--system-site-packages", venv_name],
-            cwd=gcubed_root,
-            check=True,
-        )
+        venv_cmd = ["uv", "venv", "--system-site-packages", venv_name]
+        if python_version:
+            print(f"Using Python {python_version} (from .python-version)...")
+            venv_cmd.extend(["--python", python_version])
+        else:
+            print("No specific Python version requested")
+
+        subprocess.run(venv_cmd, cwd=gcubed_root, check=True)
 
         # Get Python interpreter path
         python_path = os.path.join(venv_path, "bin", "python")
