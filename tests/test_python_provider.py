@@ -267,6 +267,67 @@ class PythonProviderTests(unittest.TestCase):
             self.assertEqual(result.path, os.path.abspath(expected_python))
             self.assertTrue(os.path.exists(expected_python))
 
+    def test_prebuilt_provider_reports_archive_version_mismatch(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            requested_version = "3.13.11"
+            actual_version = "3.13.13"
+            archive_root = os.path.join(temp_dir, "archive-root")
+            create_fake_python(
+                os.path.join(
+                    archive_root,
+                    "versions",
+                    requested_version,
+                    "bin",
+                    "python",
+                ),
+                actual_version,
+            )
+
+            archive_path = os.path.join(temp_dir, "python.tar.gz")
+            with tarfile.open(archive_path, "w:gz") as tar:
+                tar.add(
+                    os.path.join(archive_root, "versions"),
+                    arcname="versions",
+                )
+
+            with open(archive_path, "rb") as f:
+                archive_sha256 = hashlib.sha256(f.read()).hexdigest()
+
+            manifest_path = os.path.join(temp_dir, "manifest.json")
+            manifest = {
+                "archives": [
+                    {
+                        "implementation": "cpython",
+                        "version": requested_version,
+                        "platform": python_provider.get_platform_identifier(),
+                        "archive_format": "tar.gz",
+                        "asset_name": "cpython-3.13.11-linux-x86_64-glibc.tar.gz",
+                        "url": file_url(archive_path),
+                        "sha256": archive_sha256,
+                        "python": "versions/{}/bin/python".format(
+                            requested_version
+                        ),
+                    }
+                ]
+            }
+            with open(manifest_path, "w") as f:
+                json.dump(manifest, f)
+
+            with mock.patch(
+                "gcubed_build_switcher.python_provider.get_python_prebuilt_manifest_url",
+                return_value=file_url(manifest_path),
+            ):
+                result = python_provider.prebuilt_provider(
+                    requested_version,
+                    os.path.join(temp_dir, "install"),
+                )
+
+            self.assertFalse(result.ok)
+            self.assertIn("metadata mismatch", result.message)
+            self.assertIn(requested_version, result.message)
+            self.assertIn(actual_version, result.message)
+            self.assertIn("cpython-3.13.11-linux-x86_64-glibc.tar.gz", result.message)
+
     def test_safe_extract_tar_rejects_path_traversal(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             archive_path = os.path.join(temp_dir, "bad.tar.gz")

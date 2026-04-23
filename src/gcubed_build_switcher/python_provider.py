@@ -329,11 +329,26 @@ def install_prebuilt_archive(version, install_root, archive, timeout_seconds):
         safe_extract_tar(archive_path, extract_dir)
 
         extracted_python = os.path.join(extract_dir, archive_python)
-        ok, _path, _reported_version, message = validate_python_executable(
+        ok, _path, reported_version, message = validate_python_executable(
             extracted_python,
             expected_version=version,
         )
         if not ok:
+            if reported_version:
+                asset_name = archive.get("asset_name") or archive_url
+                return ProviderResult(
+                    False,
+                    message=(
+                        "Prebuilt archive metadata mismatch. Manifest advertised "
+                        "CPython {expected}, but {asset} contains Python {actual}. "
+                        "Archive URL: {url}"
+                    ).format(
+                        expected=version,
+                        asset=asset_name,
+                        actual=reported_version,
+                        url=archive_url,
+                    ),
+                )
             return ProviderResult(
                 False,
                 message="Extracted Python failed validation: {}".format(message),
