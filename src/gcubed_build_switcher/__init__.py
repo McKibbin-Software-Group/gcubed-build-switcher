@@ -9,7 +9,7 @@ This module provides a way to manage the dependencies of G-Cubed model simulatio
 by creating virtual environments specific to each G-Cubed Code library build.
 """
 
-import sys
+# import sys
 from .venv import prepare_local_venv, get_venv_name
 from .vscode import set_vscode_python_interpreter
 from .config import is_feature_disabled
