@@ -258,11 +258,13 @@ def create_venv_for_build(build_tag):
         if os.path.exists(python_version_file):
             with open(python_version_file) as f:
                 python_version = f.read().strip()
+            print(f".python-version file found - requesting version: {python_version}")
 
         print(f"Creating virtual environment for build {build_tag}...")
         venv_cmd = ["uv", "venv", "--system-site-packages", venv_name]
         if python_version:
             print(f"Using Python {python_version} (from .python-version)...")
+            subprocess.run(["uv", "python", "install", python_version], cwd=gcubed_root, check=True)
             venv_cmd.extend(["--python", python_version])
         else:
             print("No specific Python version requested")
