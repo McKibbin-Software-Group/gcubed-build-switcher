@@ -16,6 +16,14 @@ VENV_NAME_PREFIX = get_optional_env_var("GCUBED_VENV_NAME_PREFIX", "venv_gcubed_
 
 RICH_TRACEBACK_ENABLED = get_optional_env_var("RICH_TRACEBACKS")
 
+DEFAULT_PYTHON_INSTALL_ROOT = "/opt/gcubed/python-builds/pyenv"
+DEFAULT_PYTHON_PREBUILT_MANIFEST_URL = (
+    "https://github.com/AshieSlashy/gcubed-python-builds/releases/download/"
+    "python-builds-latest/manifest.json"
+)
+DEFAULT_PYTHON_DOWNLOAD_TIMEOUT_SECONDS = 60
+DEFAULT_PYTHON_PROVIDER_ORDER = "cache,path,system,prebuilt"
+
 class ConfigurationError(Exception):
     """Exception raised for configuration errors."""
     pass
@@ -59,3 +67,39 @@ def get_package_name():
 def get_prerequisites_repo_url():
     """Get the URL for the prerequisites repository."""
     return get_required_env_var("GCUBED_PYTHON_PREREQUISITES_REPO")
+
+def get_python_install_root():
+    """Get the root directory for cached MSG Python builds."""
+    return get_optional_env_var(
+        "GCUBED_PYTHON_INSTALL_ROOT",
+        DEFAULT_PYTHON_INSTALL_ROOT,
+    )
+
+def get_python_prebuilt_manifest_url():
+    """Get the manifest URL for MSG prebuilt Python archives."""
+    return get_optional_env_var(
+        "GCUBED_PYTHON_PREBUILT_MANIFEST_URL",
+        DEFAULT_PYTHON_PREBUILT_MANIFEST_URL,
+    )
+
+def get_python_download_timeout_seconds():
+    """Get the timeout for Python manifest/archive downloads."""
+    value = get_optional_env_var("GCUBED_PYTHON_DOWNLOAD_TIMEOUT_SECONDS")
+    if value is None:
+        return DEFAULT_PYTHON_DOWNLOAD_TIMEOUT_SECONDS
+
+    try:
+        timeout = int(value)
+    except ValueError:
+        return DEFAULT_PYTHON_DOWNLOAD_TIMEOUT_SECONDS
+
+    if timeout <= 0:
+        return DEFAULT_PYTHON_DOWNLOAD_TIMEOUT_SECONDS
+    return timeout
+
+def get_python_provider_order():
+    """Get the ordered Python provider chain."""
+    return get_optional_env_var(
+        "GCUBED_PYTHON_PROVIDER_ORDER",
+        DEFAULT_PYTHON_PROVIDER_ORDER,
+    )
