@@ -32,7 +32,7 @@ RICH_TRACEBACK_ENABLED = get_optional_env_var("RICH_TRACEBACKS")
 
 DEFAULT_PYTHON_INSTALL_ROOT = "~/.gcubed/python-builds/pyenv"
 DEFAULT_PYTHON_PREBUILT_MANIFEST_URL = (
-    "https://github.com/AshieSlashy/gcubed-python-builds/releases/download/"
+    "https://github.com/McKibbin-Software-Group/gcubed-python-builds/releases/download/"
     "python-builds-latest/manifest.json"
 )
 DEFAULT_PYTHON_DOWNLOAD_TIMEOUT_SECONDS = 60
