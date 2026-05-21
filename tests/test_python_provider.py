@@ -7,6 +7,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+import zipfile
 from unittest import mock
 from urllib.request import pathname2url
 
@@ -19,6 +20,7 @@ if SRC_ROOT not in sys.path:
 from gcubed_build_switcher import python_provider
 from gcubed_build_switcher import config
 from gcubed_build_switcher import venv as switcher_venv
+from gcubed_build_switcher import wheel_metadata
 
 
 def file_url(path):
@@ -33,6 +35,23 @@ def create_fake_python(path, version):
         f.write("#!/bin/sh\n")
         f.write("printf '%s\\n' '{}'\n".format(version))
     os.chmod(path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+    return path
+
+
+def create_fake_wheel(path, name="gcubed", version="1.0.0", requires_python=None):
+    metadata_lines = [
+        "Metadata-Version: 2.1",
+        "Name: {}".format(name),
+        "Version: {}".format(version),
+    ]
+    if requires_python:
+        metadata_lines.append("Requires-Python: {}".format(requires_python))
+
+    metadata = "\n".join(metadata_lines) + "\n\n"
+    dist_info = "{}-{}.dist-info".format(name, version)
+    with zipfile.ZipFile(path, "w") as wheel:
+        wheel.writestr("{}/METADATA".format(dist_info), metadata)
+        wheel.writestr("{}/WHEEL".format(dist_info), "Wheel-Version: 1.0\n")
     return path
 
 
@@ -179,6 +198,80 @@ class PythonProviderTests(unittest.TestCase):
         )
 
         self.assertEqual(archive["url"], "https://example.invalid/python.tar.gz")
+
+    def test_resolve_prebuilt_python_version_uses_lowest_satisfying_candidate(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = os.path.join(temp_dir, "manifest.json")
+            platform_id = python_provider.get_platform_identifier()
+            manifest = {
+                "archives": [
+                    {
+                        "implementation": "cpython",
+                        "version": "3.12.10",
+                        "platform": platform_id,
+                    },
+                    {
+                        "implementation": "cpython",
+                        "version": "3.13.12",
+                        "platform": platform_id,
+                    },
+                    {
+                        "implementation": "cpython",
+                        "version": "3.13.11",
+                        "platform": platform_id,
+                    },
+                    {
+                        "implementation": "cpython",
+                        "version": "3.13.10",
+                        "platform": "macos-arm64",
+                    },
+                ]
+            }
+            with open(manifest_path, "w") as f:
+                json.dump(manifest, f)
+
+            manifest_url_getter = (
+                "gcubed_build_switcher.python_provider."
+                "get_python_prebuilt_manifest_url"
+            )
+            with mock.patch(manifest_url_getter, return_value=file_url(manifest_path)):
+                version = (
+                    python_provider.resolve_prebuilt_python_version_for_specifier(
+                        ">=3.13,<3.14"
+                    )
+                )
+
+            self.assertEqual(version, "3.13.11")
+
+    def test_wheel_metadata_reads_requires_python(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wheel_path = create_fake_wheel(
+                os.path.join(temp_dir, "gcubed-1.0.0-py3-none-any.whl"),
+                requires_python=">=3.13",
+            )
+
+            self.assertEqual(
+                wheel_metadata.get_wheel_requires_python(wheel_path),
+                ">=3.13",
+            )
+
+    def test_wheel_metadata_combines_unique_requires_python_constraints(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wheel_a = create_fake_wheel(
+                os.path.join(temp_dir, "gcubed-1.0.0-py3-none-any.whl"),
+                name="gcubed",
+                requires_python=">=3.13",
+            )
+            wheel_b = create_fake_wheel(
+                os.path.join(temp_dir, "helper-1.0.0-py3-none-any.whl"),
+                name="helper",
+                requires_python="<3.14",
+            )
+
+            self.assertEqual(
+                wheel_metadata.get_combined_requires_python([wheel_a, wheel_b]),
+                ">=3.13,<3.14",
+            )
 
     def test_prebuilt_provider_rejects_checksum_mismatch(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -397,7 +490,7 @@ class PythonProviderTests(unittest.TestCase):
         self.assertIn("Matching prebuilt archive found: no", message)
         self.assertIn("Please contact G-Cubed support", message)
 
-    def test_venv_creation_passes_absolute_python_path_to_uv(self):
+    def test_venv_creation_passes_absolute_python_path_to_uv_from_python_version(self):
         with tempfile.TemporaryDirectory() as gcubed_root:
             temp_dir = os.path.join(gcubed_root, "temp-prereqs")
             os.makedirs(temp_dir)
@@ -452,6 +545,65 @@ class PythonProviderTests(unittest.TestCase):
                     command[:3] == ["uv", "python", "install"]
                     for command, _cwd, _check, _env in commands
                 )
+            )
+
+    def test_venv_creation_prefers_wheel_requires_python_over_python_version(self):
+        with tempfile.TemporaryDirectory() as gcubed_root:
+            temp_dir = os.path.join(gcubed_root, "temp-prereqs")
+            os.makedirs(temp_dir)
+            create_fake_wheel(
+                os.path.join(temp_dir, "gcubed-1.0.0-py3-none-any.whl"),
+                requires_python=">=3.13",
+            )
+            with open(os.path.join(temp_dir, ".python-version"), "w") as f:
+                f.write("3.10.12\n")
+
+            commands = []
+
+            def fake_run(cmd, cwd=None, check=False, env=None, **_kwargs):
+                commands.append((cmd, cwd, check, env))
+
+            with mock.patch(
+                "gcubed_build_switcher.venv.validate_build_tag",
+                return_value=(True, temp_dir),
+            ), mock.patch(
+                "gcubed_build_switcher.venv.get_gcubed_root",
+                return_value=gcubed_root,
+            ), mock.patch(
+                "gcubed_build_switcher.venv."
+                "resolve_prebuilt_python_version_for_specifier",
+                return_value="3.13.11",
+            ) as resolve_version, mock.patch(
+                "gcubed_build_switcher.venv.ensure_python_available",
+                return_value="/tmp/gcubed-python-3.13.11",
+            ) as ensure_python, mock.patch(
+                "gcubed_build_switcher.venv.install_packages",
+                return_value=True,
+            ), mock.patch(
+                "gcubed_build_switcher.venv.ensure_runtime_support_packages",
+                return_value=True,
+            ), mock.patch(
+                "gcubed_build_switcher.venv.subprocess.run",
+                side_effect=fake_run,
+            ), mock.patch(
+                "sys.stdout",
+                new=io.StringIO(),
+            ):
+                result = switcher_venv.create_venv_for_build("build-tag")
+
+            self.assertTrue(result)
+            resolve_version.assert_called_once_with(">=3.13")
+            ensure_python.assert_called_once_with("3.13.11")
+            venv_commands = [
+                (command, env)
+                for command, _cwd, _check, env in commands
+                if command[:2] == ["uv", "venv"]
+            ]
+            self.assertEqual(len(venv_commands), 1)
+            venv_command, _venv_env = venv_commands[0]
+            self.assertEqual(
+                venv_command[venv_command.index("--python") + 1],
+                "/tmp/gcubed-python-3.13.11",
             )
 
     def test_runtime_support_install_installs_switcher_when_missing(self):

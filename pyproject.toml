@@ -21,6 +21,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Economics",
 ]
 dependencies = [
+  "packaging",
   "rich"
 ]
 

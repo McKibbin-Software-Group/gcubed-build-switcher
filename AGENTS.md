@@ -16,7 +16,7 @@ Release artifacts in `release-files/` are consumed by the G-Cubed devcontainer t
 1. User code calls `gcubed_build_switcher.activate_or_build_and_activate_venv(build_tag)` or runs `gcubed-switch <build_tag>`.
 2. `src/gcubed_build_switcher/__init__.py` checks whether `GCUBED_CODE_AUTO_BUILD_SWITCHER_DISABLED` is present and exits early if so.
 3. `venv.prepare_local_venv()` looks for `${GCUBED_ROOT}/venv_gcubed_<build_tag>/bin/python` and verifies that `GCUBED_CODE_PACKAGE_NAME` is installed using `uv pip show`.
-4. If missing, `venv.create_venv_for_build()` clones `GCUBED_PYTHON_PREREQUISITES_REPO` at the requested tag into a temporary directory, reads an optional `.python-version`, creates the venv, and installs any `*.whl` and `requirements*.txt` files found in that tag.
+4. If missing, `venv.create_venv_for_build()` clones `GCUBED_PYTHON_PREREQUISITES_REPO` at the requested tag into a temporary directory, reads wheel `Requires-Python` metadata to choose an exact prebuilt Python version when declared, creates the venv, and installs any `*.whl` and `requirements*.txt` files found in that tag. An optional `.python-version` is only a deprecated fallback when wheels do not declare `Requires-Python`.
 5. `vscode.set_vscode_python_interpreter()` sends a null-terminated JSON message over `GCUBED_VENV_SOCKET_PATH` to request `"set-interpreter"`.
 6. The VS Code extension receives the request in `vscode-extension/src/unixSocketServer/`, then `handlers/interpreterHandler.js` refreshes/resolves Python environments and calls the Python extension API to update the active interpreter path.
 
@@ -58,7 +58,7 @@ npm run package:major
 
 - Keep the Python side compatible with `requires-python = ">=3.6"` unless the project explicitly raises that floor.
 - The Python package currently shells out to `git` and `uv`; avoid replacing these with heavier abstractions unless there is a clear reliability or coverage win.
-- `venv.py` currently uses `uv python install <version>` when `.python-version` is present, then `uv venv --python <version>`. Future Python-provider work should preserve the ability to use `uv pip` for fast package installs even if interpreter acquisition moves elsewhere.
+- `venv.py` prefers wheel `Requires-Python` metadata over `.python-version`, resolves that requirement to the lowest exact matching CPython patch version in the prebuilt manifest, then calls `uv venv --python <resolved-python>`. Future Python-provider work should preserve the ability to use `uv pip` for fast package installs even if interpreter acquisition moves elsewhere.
 - The extension IPC protocol is null-terminated UTF-8 JSON over a Unix domain socket. Keep the Python client and JS server constants in sync.
 - Extension tests exercise socket behaviour under `vscode-extension/tests/unixSocketServer/`; they mock or isolate socket paths rather than requiring the live VS Code extension.
 - The extension README still mentions older HTTP/port-based examples in places, but the source code currently uses Unix sockets.

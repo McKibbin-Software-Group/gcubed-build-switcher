@@ -16,7 +16,12 @@ from .config import (
     ConfigurationError,
 )
 from .packages import install_packages
-from .python_provider import ensure_python_available, PythonProviderError
+from .python_provider import (
+    ensure_python_available,
+    resolve_prebuilt_python_version_for_specifier,
+    PythonProviderError,
+)
+from .wheel_metadata import get_combined_requires_python, WheelMetadataError
 
 
 def get_venv_name(gcubed_code_build_tag):
@@ -351,16 +356,46 @@ def create_venv_for_build(build_tag):
         venv_path = os.path.join(gcubed_root, venv_name)
 
         # Create new venv only after validating the build tag
+        wheel_files = glob.glob(os.path.join(temp_dir_path, "*.whl"))
+        requirements_txt_files = glob.glob(
+            os.path.join(temp_dir_path, "requirements*.txt")
+        )
+
         python_version_file = os.path.join(temp_dir_path, ".python-version")
         python_version = None
         if os.path.exists(python_version_file):
             with open(python_version_file) as f:
                 python_version = f.read().strip()
-            print(f".python-version file found - requesting version: {python_version}")
+
+        requires_python = get_combined_requires_python(wheel_files)
 
         print(f"Creating virtual environment for build {build_tag}...")
         venv_cmd = ["uv", "venv", "--system-site-packages", venv_name]
-        if python_version:
+        if requires_python:
+            exact_python_version = resolve_prebuilt_python_version_for_specifier(
+                requires_python
+            )
+            print(
+                "Wheel metadata declares Requires-Python '{}'; "
+                "requesting CPython {}.".format(
+                    requires_python,
+                    exact_python_version,
+                )
+            )
+            if python_version:
+                print(
+                    ".python-version file found but ignored; wheel metadata is "
+                    "now the source of truth for Python version selection."
+                )
+            python_executable = ensure_python_available(exact_python_version)
+            venv_cmd.extend(["--python", python_executable])
+        elif python_version:
+            print(
+                ".python-version file found - requesting version: {} "
+                "(deprecated; prefer wheel Requires-Python metadata)".format(
+                    python_version,
+                )
+            )
             print(f"Resolving Python {python_version} (from .python-version)...")
             python_executable = ensure_python_available(python_version)
             venv_cmd.extend(["--python", python_executable])
@@ -371,12 +406,6 @@ def create_venv_for_build(build_tag):
 
         # Get Python interpreter path
         python_path = get_venv_python_path(venv_path)
-
-        # Find files to install
-        wheel_files = glob.glob(os.path.join(temp_dir_path, "*.whl"))
-        requirements_txt_files = glob.glob(
-            os.path.join(temp_dir_path, "requirements*.txt")
-        )
 
         # Install wheel files and requirements files
         if not install_packages(
@@ -405,6 +434,9 @@ def create_venv_for_build(build_tag):
         return True
 
     except PythonProviderError as e:
+        print(str(e))
+        return False
+    except WheelMetadataError as e:
         print(str(e))
         return False
     except Exception as e:

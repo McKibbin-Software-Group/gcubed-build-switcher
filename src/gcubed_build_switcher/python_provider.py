@@ -12,6 +12,9 @@ import time
 import urllib.request
 from typing import Optional
 
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from packaging.version import InvalidVersion, Version
+
 from .config import (
     DEFAULT_PYTHON_PROVIDER_ORDER,
     get_python_download_timeout_seconds,
@@ -185,7 +188,7 @@ def path_provider(version):
         False,
         message=(
             "No explicit absolute interpreter path was requested; "
-            "'.python-version' requested version {}."
+            "resolved Python version request is {}."
         ).format(version),
     )
 
@@ -527,6 +530,67 @@ def find_manifest_archive(manifest, version, platform_id):
             continue
         return archive
     return None
+
+
+def resolve_prebuilt_python_version_for_specifier(python_specifier: str) -> str:
+    """
+    Resolve a Requires-Python specifier to an exact prebuilt CPython version.
+
+    The lowest matching version in the configured prebuilt manifest is selected
+    so fresh environments remain predictable as newer patch builds are added.
+    """
+    specifier_text = (python_specifier or "").strip()
+    if not specifier_text:
+        raise PythonProviderError("No Python requirement specifier was provided.")
+
+    try:
+        specifier = SpecifierSet(specifier_text)
+    except InvalidSpecifier as e:
+        raise PythonProviderError(
+            "Wheel Requires-Python value '{}' is not valid: {}".format(
+                specifier_text,
+                e,
+            )
+        )
+
+    manifest_url = get_python_prebuilt_manifest_url()
+    timeout_seconds = get_python_download_timeout_seconds()
+    platform_id = get_platform_identifier()
+
+    try:
+        manifest = fetch_json_url(manifest_url, timeout_seconds)
+    except Exception as e:
+        raise PythonProviderError(
+            "Could not fetch Python prebuilt manifest {} while resolving "
+            "Requires-Python '{}': {}".format(manifest_url, specifier_text, e)
+        )
+
+    matching_versions = []
+    for archive in manifest.get("archives", []):
+        if archive.get("implementation") != "cpython":
+            continue
+        if archive.get("platform") != platform_id:
+            continue
+
+        version_text = archive.get("version")
+        try:
+            version = Version(version_text)
+        except (TypeError, InvalidVersion):
+            continue
+
+        if specifier.contains(version, prereleases=False):
+            matching_versions.append(version)
+
+    if not matching_versions:
+        raise PythonProviderError(
+            "No prebuilt CPython version for platform {} satisfies "
+            "Requires-Python '{}'. Please contact G-Cubed support.".format(
+                platform_id,
+                specifier_text,
+            )
+        )
+
+    return str(min(matching_versions))
 
 
 def safe_extract_tar(archive_path, destination):

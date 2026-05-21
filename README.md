@@ -58,11 +58,15 @@ Python unit tests can be run with:
 python3 -m unittest discover -s tests -v
 ```
 
-When `.python-version` requests a Python version that is not already available,
-prebuilt Python archives are cached under
-`~/.gcubed/python-builds/pyenv` by default. Set
-`GCUBED_PYTHON_INSTALL_ROOT` to use a shared/pre-provisioned location such as
-`/opt/gcubed/python-builds/pyenv`.
+When a wheel declares `Requires-Python`, the switcher reads that metadata before
+creating the virtual environment, chooses the lowest exact matching CPython patch
+version from the configured prebuilt Python manifest, and creates the venv with
+that interpreter. A `.python-version` file is still supported as a deprecated
+fallback when wheels do not declare `Requires-Python`.
+
+Prebuilt Python archives are cached under `~/.gcubed/python-builds/pyenv` by
+default. Set `GCUBED_PYTHON_INSTALL_ROOT` to use a shared/pre-provisioned
+location such as `/opt/gcubed/python-builds/pyenv`.
 
 If prebuilt Python release assets are republished, remove the affected cached
 version directory, for example
