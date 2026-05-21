@@ -1,3 +1,6 @@
+# Local agent skill installs
+.agents/
+
 # Test files
 test-output/
 
