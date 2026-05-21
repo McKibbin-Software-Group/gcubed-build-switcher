@@ -1,70 +1,44 @@
-# G-Cubed Build Switcher Agent Notes
+# G-Cubed Build Switcher Agent Instructions
 
-## Project Purpose
+Start with `docs/00-START-HERE.md`. Durable project context belongs in
+`docs/`; temporary investigation plans or handoff notes belong in `docs/ai/`.
+Keep this file limited to instructions that should shape agent behavior before
+or while reading the rest of the project memory.
 
-This repo ships a helper used inside G-Cubed customer devcontainers. Its job is to let model/simulation Python code request the G-Cubed Code library build it needs, ensure a matching virtual environment exists, and ask VS Code to switch its active Python interpreter to that environment.
+## Before Editing
 
-There are two cooperating components:
+- Check `git status --short` and relevant diffs. Preserve user changes.
+- Read `docs/02-current-status.md` and `docs/04-next-steps.md` for current
+  risks, validation state, and pickup tasks.
+- Keep changes minimal and scoped to the user's request.
+- Run the narrowest meaningful validation and report what passed or could not
+  be run.
 
-- `src/gcubed_build_switcher/`: Python package and CLI (`gcubed-switch`) that validates a requested build tag, creates/verifies a build-specific venv, installs wheel and requirements artifacts from the tagged prerequisites repo, and sends the interpreter switch request.
-- `vscode-extension/`: JavaScript VS Code extension that starts a Unix domain socket server and uses the Microsoft Python extension API to switch the active interpreter.
+## Guardrails
 
-Release artifacts in `release-files/` are consumed by the G-Cubed devcontainer template from the GitHub `latest` release. Treat checked-in `.vsix` files as generated release artifacts unless the task is explicitly about packaging/releasing.
+- Keep the Python side compatible with `requires-python = ">=3.6"` unless the
+  project explicitly raises that floor.
+- In devcontainers, venv creation uses the ambient container Python. Do not
+  reintroduce `.python-version`, wheel `Requires-Python`, or prebuilt-Python
+  acquisition there unless the devcontainer Python strategy changes. Preserve
+  the non-devcontainer interpreter-provider path.
+- The Python package currently shells out to `git` and `uv`; prefer the existing
+  command-based flow over heavier abstractions unless there is a clear
+  reliability or coverage win.
+- The extension IPC protocol is null-terminated UTF-8 JSON over a Unix domain
+  socket. Keep the Python client and JavaScript server constants in sync.
+- Treat checked-in `.vsix` files as generated release artifacts unless the task
+  is explicitly about packaging or release.
+- Avoid destructive cleanup of `venv_gcubed*` directories unless the user
+  explicitly asks; existing venvs may be useful to the devcontainer user.
+- Do not print full secrets, token values, or sensitive config contents.
 
-## Runtime Flow
+## Documentation Boundary
 
-1. User code calls `gcubed_build_switcher.activate_or_build_and_activate_venv(build_tag)` or runs `gcubed-switch <build_tag>`.
-2. `src/gcubed_build_switcher/__init__.py` checks whether `GCUBED_CODE_AUTO_BUILD_SWITCHER_DISABLED` is present and exits early if so.
-3. `venv.prepare_local_venv()` looks for `${GCUBED_ROOT}/venv_gcubed_<build_tag>/bin/python` and verifies that `GCUBED_CODE_PACKAGE_NAME` is installed using `uv pip show`.
-4. If missing, `venv.create_venv_for_build()` clones `GCUBED_PYTHON_PREREQUISITES_REPO` at the requested tag into a temporary directory, reads wheel `Requires-Python` metadata to choose an exact prebuilt Python version when declared, creates the venv, and installs any `*.whl` and `requirements*.txt` files found in that tag. An optional `.python-version` is only a deprecated fallback when wheels do not declare `Requires-Python`.
-5. `vscode.set_vscode_python_interpreter()` sends a null-terminated JSON message over `GCUBED_VENV_SOCKET_PATH` to request `"set-interpreter"`.
-6. The VS Code extension receives the request in `vscode-extension/src/unixSocketServer/`, then `handlers/interpreterHandler.js` refreshes/resolves Python environments and calls the Python extension API to update the active interpreter path.
-
-## Important Environment Variables
-
-- `GCUBED_ROOT`: root directory where build-specific venvs and temporary prerequisite clones are created.
-- `GCUBED_PYTHON_PREREQUISITES_REPO`: git repo containing build-tagged wheels, requirements files, and optional `.python-version`.
-- `GCUBED_CODE_PACKAGE_NAME`: package name used to verify a venv contains the expected G-Cubed library.
-- `GCUBED_CODE_AUTO_BUILD_SWITCHER_DISABLED`: when present with any value, disables automatic switching.
-- `GCUBED_VENV_SOCKET_PATH`: Unix socket path shared by Python and the extension, default `/tmp/gcubed_venv_switcher.sock`.
-- `GCUBED_VENV_NAME_PREFIX`: venv name prefix, default `venv_gcubed_`.
-- `RICH_TRACEBACKS`: when present, `venv.py` writes Rich traceback setup into the target venv's `sitecustomize.py`.
-- `UV_LINK_MODE=copy`: configured in the devcontainer so dependencies are copied into generated venvs instead of linked from uv's cache.
-
-## Development Commands
-
-Python package:
-
-```bash
-python -m src.gcubed_build_switcher.cli <build_tag>
-gcubed-switch <build_tag>
-```
-
-VS Code extension commands should be run from `vscode-extension/`:
-
-```bash
-npm install
-npm run build
-npm run test:socket
-npm run package:test
-npm run package:patch
-npm run package:minor
-npm run package:major
-```
-
-`package:patch`, `package:minor`, and `package:major` bump the extension version, build a production `.vsix`, and copy it into `release-files/`.
-
-## Code And Maintenance Notes
-
-- Keep the Python side compatible with `requires-python = ">=3.6"` unless the project explicitly raises that floor.
-- The Python package currently shells out to `git` and `uv`; avoid replacing these with heavier abstractions unless there is a clear reliability or coverage win.
-- `venv.py` prefers wheel `Requires-Python` metadata over `.python-version`, resolves that requirement to the lowest exact matching CPython patch version in the prebuilt manifest, then calls `uv venv --python <resolved-python>`. Future Python-provider work should preserve the ability to use `uv pip` for fast package installs even if interpreter acquisition moves elsewhere.
-- The extension IPC protocol is null-terminated UTF-8 JSON over a Unix domain socket. Keep the Python client and JS server constants in sync.
-- Extension tests exercise socket behaviour under `vscode-extension/tests/unixSocketServer/`; they mock or isolate socket paths rather than requiring the live VS Code extension.
-- The extension README still mentions older HTTP/port-based examples in places, but the source code currently uses Unix sockets.
-- Avoid destructive cleanup of `venv_gcubed*` directories unless the user explicitly asks; existing venvs may be useful to the devcontainer user.
-- `.codex` is currently an untracked root file in this workspace. Leave unrelated untracked or user-created files alone.
-
-## Release Notes
-
-The devcontainer template downloads `release-files/pyproject.toml` and the packaged VSIX from the GitHub `latest` release. For a real release, confirm changes are merged to `main`, create/update the GitHub release tagged `latest`, and attach the files from `release-files/`.
+- Put stable architecture, runtime flow, environment variables, commands, and
+  release process in `docs/01-repo-overview.md`.
+- Put current behavior, known risks, and latest validation in
+  `docs/02-current-status.md`.
+- Put next operator or agent actions in `docs/04-next-steps.md`.
+- Use `docs/ai/` only for temporary working notes that should later be promoted
+  into canonical docs or removed.
