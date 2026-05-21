@@ -8,6 +8,7 @@ Last updated: 2026-05-21
 2. Update stale extension-facing docs and metadata from HTTP/port wording to Unix socket wording.
 3. Decide how versions should line up across root `pyproject.toml`, `vscode-extension/package.json`, `release-files/pyproject.toml`, and `src/gcubed_build_switcher/__init__.py`.
 4. Confirm release shim behavior: floating `main` dependency versus pinned release ref.
+5. Ensure the customer devcontainer template sets a devcontainer marker such as `GCUBED_DEVCONTAINER=1`, or confirm the target host reliably exposes `DEVCONTAINER`, `REMOTE_CONTAINERS`, or `CODESPACES`.
 
 ## Validation To Run
 
@@ -30,6 +31,7 @@ node vscode-extension/tests/live/runSocketTests.js
 ## Context Needed Before Starting
 
 - Target customer devcontainer assumptions: user IDs, socket permissions, available Python extension, and network access.
+- Devcontainer runtime marker guaranteed by the customer template or host.
 - Expected versioning policy for Python package, VS Code extension, release shim, and generated artifacts.
 - Whether release assets should float to `main` or pin to immutable refs.
 - A real prerequisites repo tag for CLI/end-to-end smoke testing.

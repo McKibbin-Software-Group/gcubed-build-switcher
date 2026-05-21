@@ -30,6 +30,13 @@ VENV_NAME_PREFIX = get_optional_env_var("GCUBED_VENV_NAME_PREFIX", "venv_gcubed_
 
 RICH_TRACEBACK_ENABLED = get_optional_env_var("RICH_TRACEBACKS")
 
+DEVCONTAINER_MARKER_ENV_VARS = (
+    "GCUBED_DEVCONTAINER",
+    "DEVCONTAINER",
+    "REMOTE_CONTAINERS",
+    "CODESPACES",
+)
+
 DEFAULT_PYTHON_INSTALL_ROOT = "~/.gcubed/python-builds/pyenv"
 DEFAULT_PYTHON_PREBUILT_MANIFEST_URL = (
     "https://github.com/McKibbin-Software-Group/gcubed-python-builds/releases/download/"
@@ -76,6 +83,15 @@ def is_feature_disabled(feature_name: str) -> bool:
     status = "disabled" if feature_is_disabled else "enabled"
     print(f"Feature {feature_name} is {status}")
     return bool(feature_is_disabled)
+
+
+def is_running_in_devcontainer() -> bool:
+    """Detect explicit devcontainer/Codespaces runtime markers."""
+    for name in DEVCONTAINER_MARKER_ENV_VARS:
+        value = os.environ.get(name)
+        if value and value.strip().lower() not in ("0", "false", "no", "off"):
+            return True
+    return False
 
 
 def get_gcubed_root() -> str:

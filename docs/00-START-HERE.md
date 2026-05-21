@@ -4,13 +4,18 @@ This is the entrypoint for humans and agents working in this repo.
 
 ## Current Source Of Truth
 
-- Repo instructions: `AGENTS.md`
+- Agent guardrails: `AGENTS.md`
 - Repo overview: `docs/01-repo-overview.md`
 - Current status: `docs/02-current-status.md`
 - Roadmap: `docs/03-roadmap.md`
 - Next steps: `docs/04-next-steps.md`
 - Architecture decisions, when useful: `docs/adr/`
 - Temporary AI working notes, when useful: `docs/ai/`
+
+`AGENTS.md` is intentionally lean. It should contain only instructions that
+shape agent behavior before or while reading the rest of the memory set. Stable
+project facts belong in `docs/`; temporary investigation or handoff material
+belongs in `docs/ai/`.
 
 ## Project In One Paragraph
 
@@ -35,7 +40,7 @@ python -m src.gcubed_build_switcher.cli <build_tag>
 ## Before Making Changes
 
 - Read root `AGENTS.md`.
-- Check `docs/02-current-status.md` and `docs/04-next-steps.md`.
+- Check `docs/01-repo-overview.md`, `docs/02-current-status.md`, and `docs/04-next-steps.md`.
 - Inspect relevant code and config before editing.
 - Preserve local/user changes; this repo often has generated or untracked files.
 - Treat checked-in `.vsix` files as release artifacts unless the task is explicitly about packaging or release.

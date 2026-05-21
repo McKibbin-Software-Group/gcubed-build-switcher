@@ -93,6 +93,16 @@ class PythonProviderTests(unittest.TestCase):
 
         self.assertEqual(install_root, os.path.join(home_dir, "custom-python-cache"))
 
+    def test_devcontainer_detection_uses_explicit_runtime_markers(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertFalse(config.is_running_in_devcontainer())
+
+        for marker in config.DEVCONTAINER_MARKER_ENV_VARS:
+            with mock.patch.dict(os.environ, {marker: "true"}, clear=True):
+                self.assertTrue(config.is_running_in_devcontainer())
+            with mock.patch.dict(os.environ, {marker: "false"}, clear=True):
+                self.assertFalse(config.is_running_in_devcontainer())
+
     def test_validate_python_executable_requires_exact_patch_version(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             python_path = create_fake_python(
@@ -509,6 +519,9 @@ class PythonProviderTests(unittest.TestCase):
                 "gcubed_build_switcher.venv.get_gcubed_root",
                 return_value=gcubed_root,
             ), mock.patch(
+                "gcubed_build_switcher.venv.is_running_in_devcontainer",
+                return_value=False,
+            ), mock.patch(
                 "gcubed_build_switcher.venv.ensure_python_available",
                 return_value="/tmp/gcubed-python",
             ), mock.patch(
@@ -570,6 +583,9 @@ class PythonProviderTests(unittest.TestCase):
                 "gcubed_build_switcher.venv.get_gcubed_root",
                 return_value=gcubed_root,
             ), mock.patch(
+                "gcubed_build_switcher.venv.is_running_in_devcontainer",
+                return_value=False,
+            ), mock.patch(
                 "gcubed_build_switcher.venv."
                 "resolve_prebuilt_python_version_for_specifier",
                 return_value="3.13.11",
@@ -605,6 +621,64 @@ class PythonProviderTests(unittest.TestCase):
                 venv_command[venv_command.index("--python") + 1],
                 "/tmp/gcubed-python-3.13.11",
             )
+
+    def test_venv_creation_uses_ambient_python_in_devcontainer(self):
+        with tempfile.TemporaryDirectory() as gcubed_root:
+            temp_dir = os.path.join(gcubed_root, "temp-prereqs")
+            os.makedirs(temp_dir)
+            create_fake_wheel(
+                os.path.join(temp_dir, "gcubed-1.0.0-py3-none-any.whl"),
+                requires_python=">=3.13",
+            )
+            with open(os.path.join(temp_dir, ".python-version"), "w") as f:
+                f.write("3.10.12\n")
+
+            commands = []
+
+            def fake_run(cmd, cwd=None, check=False, env=None, **_kwargs):
+                commands.append((cmd, cwd, check, env))
+
+            with mock.patch(
+                "gcubed_build_switcher.venv.validate_build_tag",
+                return_value=(True, temp_dir),
+            ), mock.patch(
+                "gcubed_build_switcher.venv.get_gcubed_root",
+                return_value=gcubed_root,
+            ), mock.patch(
+                "gcubed_build_switcher.venv.is_running_in_devcontainer",
+                return_value=True,
+            ), mock.patch(
+                "gcubed_build_switcher.venv."
+                "resolve_prebuilt_python_version_for_specifier",
+            ) as resolve_version, mock.patch(
+                "gcubed_build_switcher.venv.ensure_python_available",
+            ) as ensure_python, mock.patch(
+                "gcubed_build_switcher.venv.install_packages",
+                return_value=True,
+            ), mock.patch(
+                "gcubed_build_switcher.venv.ensure_runtime_support_packages",
+                return_value=True,
+            ), mock.patch(
+                "gcubed_build_switcher.venv.subprocess.run",
+                side_effect=fake_run,
+            ), mock.patch(
+                "sys.stdout",
+                new=io.StringIO(),
+            ):
+                result = switcher_venv.create_venv_for_build("build-tag")
+
+            self.assertTrue(result)
+            resolve_version.assert_not_called()
+            ensure_python.assert_not_called()
+            venv_commands = [
+                (command, env)
+                for command, _cwd, _check, env in commands
+                if command[:2] == ["uv", "venv"]
+            ]
+            self.assertEqual(len(venv_commands), 1)
+            venv_command, venv_env = venv_commands[0]
+            self.assertNotIn("--python", venv_command)
+            self.assertEqual(venv_env["UV_LINK_MODE"], "copy")
 
     def test_runtime_support_install_installs_switcher_when_missing(self):
         commands = []

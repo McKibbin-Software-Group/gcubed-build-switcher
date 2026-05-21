@@ -58,11 +58,13 @@ Python unit tests can be run with:
 python3 -m unittest discover -s tests -v
 ```
 
-When a wheel declares `Requires-Python`, the switcher reads that metadata before
-creating the virtual environment, chooses the lowest exact matching CPython patch
-version from the configured prebuilt Python manifest, and creates the venv with
-that interpreter. A `.python-version` file is still supported as a deprecated
-fallback when wheels do not declare `Requires-Python`.
+Inside a devcontainer, the switcher creates build virtual environments from the
+ambient Python installed in the container. Outside a devcontainer, when a wheel
+declares `Requires-Python`, the switcher reads that metadata before creating the
+virtual environment, chooses the lowest exact matching CPython patch version from
+the configured prebuilt Python manifest, and creates the venv with that
+interpreter. A `.python-version` file is still supported outside devcontainers as
+a deprecated fallback when wheels do not declare `Requires-Python`.
 
 Prebuilt Python archives are cached under `~/.gcubed/python-builds/pyenv` by
 default. Set `GCUBED_PYTHON_INSTALL_ROOT` to use a shared/pre-provisioned

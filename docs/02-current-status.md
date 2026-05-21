@@ -7,14 +7,15 @@ Last updated: 2026-05-21
 - Python package version in root `pyproject.toml`: `1.1.4`.
 - VS Code extension package version: `1.1.2`.
 - `release-files/pyproject.toml` version: `1.2.2` and installs `gcubed-build-switcher` from GitHub `main`.
-- Python venv creation currently prefers wheel `Requires-Python` metadata, resolves the lowest matching exact CPython patch version from the prebuilt manifest, and only uses `.python-version` as a deprecated fallback.
+- In devcontainers, Python venv creation uses the ambient Python and skips wheel `Requires-Python`/`.python-version` interpreter acquisition. Outside devcontainers, it still prefers wheel `Requires-Python` metadata, resolves the lowest matching exact CPython patch version from the prebuilt manifest, and only uses `.python-version` as a deprecated fallback.
 - Generated build venvs install `gcubed-build-switcher` and `rich` so scripts can continue importing the switcher after VS Code changes interpreter.
 - Python and extension IPC use null-terminated UTF-8 JSON over a Unix domain socket.
-- Root `AGENTS.md` is current enough to serve as the repo-local agent instruction source.
+- Root `AGENTS.md` is intentionally lean and serves as repo-local agent guardrails; durable project facts live in `docs/`.
 
 ## Recent Scan Notes
 
 - `docs/` was missing before this project-memory setup.
+- `AGENTS.md` was rewritten as a concise guardrail file on 2026-05-21; runtime flow, environment variables, maintenance notes, and release behavior now live in `docs/01-repo-overview.md`.
 - Initial `git status --short` showed only untracked `.agents/` and `skills-lock.json`.
 - `vscode-extension/node_modules/`, `dist/`, `production/`, and `test/` are present locally.
 - `vscode-extension/package.json` still describes "local HTTP requests" even though the source uses Unix sockets.
@@ -36,18 +37,17 @@ Last updated: 2026-05-21
 - Commands run:
 
 ```bash
-python3 -m unittest discover -s tests -v
+python3 -m unittest tests.test_python_provider
 
-cd vscode-extension
-npm run build
-npm run test:socket
+python3 -m unittest discover -s tests -v
 ```
 
 - Result:
-  - Python unit tests passed: 20 tests.
-  - Extension build passed and produced `dist/extension.js`.
-  - Extension socket tests failed before executing tests: `Cannot find module 'vscode'` from `src/handlers/interpreterHandler.js`.
+  - Focused Python provider/venv tests passed: 22 tests.
+  - Full Python unit discovery passed: 22 tests.
+  - Extension build/socket tests were not rerun for this Python-only change; previous broader validation passed the extension build and found the known `vscode` module resolution failure in extension socket tests.
 - Gaps:
+  - Extension validation was not rerun for this Python-only change.
   - No CLI smoke test was run because it requires real G-Cubed environment variables, prerequisite repo access, and a build tag.
   - No live VS Code interpreter-switch validation was run.
 
