@@ -1,11 +1,29 @@
 {
   "version": 1,
   "skills": {
+    "code-structure-cleanup": {
+      "source": "ashieslashy/skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-structure-cleanup/SKILL.md",
+      "computedHash": "be910e5426ef20ac1660ae223e4df8ff25dea374773b76aedd71de21a6a4dd19"
+    },
     "project-memory": {
       "source": "ashieslashy/skills",
       "sourceType": "github",
       "skillPath": "skills/project-memory/SKILL.md",
-      "computedHash": "82927692e112e5c9a1ccfab45d7365250b473d1f6281bb8c7970a75a49a37beb"
+      "computedHash": "58456526d6e0d02d7df7e61f8aba7c5a1bab69af9f1dcd298377ed272200c299"
+    },
+    "review-synthesis": {
+      "source": "ashieslashy/skills",
+      "sourceType": "github",
+      "skillPath": "skills/review-synthesis/SKILL.md",
+      "computedHash": "3bde3f687cfb6d662dbd7f9f0d30fce67b71bb41fc1fe0c47e7131ed32501eea"
+    },
+    "skill-capture": {
+      "source": "ashieslashy/skills",
+      "sourceType": "github",
+      "skillPath": "skills/skill-capture/SKILL.md",
+      "computedHash": "0dd1edf5b952ac17344452bf0bf832a8fdae6ec455f7d5d41b38736a9bd4db0c"
     }
   }
 }
