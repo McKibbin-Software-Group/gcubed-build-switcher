@@ -1,88 +1,89 @@
-# G-Cubed VSCode python venv switcher
+# G-Cubed VS Code Python venv switcher
 
-This project is used by the Python project in this repo.
+This extension is the VS Code half of the G-Cubed build switcher. The Python package creates or verifies a build-specific venv, then sends a local Unix socket request so this extension can select the matching VS Code Python interpreter.
 
-***Start in a devcontainer***
+## Development
 
-Don't forget to `npm install` to ensure your environment has that new-car smell.
+Start in a devcontainer, then install extension dependencies:
 
-## Building
-Build, package, and deploy.
+```bash
+npm install
+```
 
-### Test
-Unminified for testing for easier debugging.
-``` bash
+Run the fast extension checks:
+
+```bash
+npm run test:unit
+npm run build
+npm run test:socket
+```
+
+`npm run test:socket` needs an environment that permits Unix domain sockets under `/tmp`; the default agent sandbox may block that with `EPERM`.
+
+## Package And Install
+
+Create an unminified test VSIX:
+
+```bash
 npm run package:test
-code --install-extension test/vscode-interpreter-switcher-test.vsix
-ctrl-shift-p - Developer: reload window
+code --install-extension test/gcubed-vscode-venv-switcher-test.version.vsix
 ```
 
-### Prod:
-Produces a minified & version-named package.
-``` bash
-npm run package:production
-code --install-extension production/vscode-interpreter-switcher-0.1.0.vsix
-ctrl-shift-p - Developer: reload window
+Then run `Developer: Reload Window` in VS Code.
+
+Production package scripts are versioned by release type:
+
+```bash
+npm run package:patch
+npm run package:minor
+npm run package:major
 ```
 
-Once satisfied copy the .vsix file to the target devcontainer.
+They write a production VSIX and copy it to `../release-files/`.
 
-## Installation
-TODO
+## Runtime IPC
 
-**Important** - target devcontainer must have the following port setups:
-``` JSON
-"portsAttributes": {
-    // auto-forward charting page to local web browser.
-    "8888": {
-      "label": "G-Cubed Chart",
-      "onAutoForward": "openBrowser"
-    },
-    // Internal use only. Do not expose the helper outside the devcontainer.
-    "9876": {
-      "label": "G-Cubed venv helper",
-      "onAutoForward": "ignore"
-    }
+The extension listens on a Unix domain socket, not an HTTP port. The default socket path is `/tmp/gcubed_venv_switcher.sock`; override it with `GCUBED_VENV_SOCKET_PATH` if needed.
+
+Requests are null-terminated UTF-8 JSON. The interpreter switch request shape is:
+
+```json
+{
+  "action": "set-interpreter",
+  "pythonPath": "venv_gcubed_c_0002/bin/python"
+}
 ```
 
-## Testing
+Relative paths are resolved against the first VS Code workspace folder. Absolute interpreter paths are also accepted.
 
-### Test 1: Valid request with absolute path - gcubed
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{"pythonPath": "/workspaces/test-new-gcubed-2R/venv_gcubed_c_0002/bin/python"}'
+## Live Smoke Test
+
+With VS Code open and this extension active, run:
+
+```bash
+node tests/live/runSocketTests.js
 ```
 
-### Test 2: Valid request with relative path (will be resolved relative to workspace) - gcubed
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{"pythonPath": "venv_gcubed_c_0002/bin/python"}'
+For the full Python-to-extension path, run a configured build switcher smoke test from the repo root:
+
+```bash
+python -m src.gcubed_build_switcher.cli <build_tag>
 ```
 
-#### Test 2a: Valid request relative path back to global /usr/local/bin/python
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{"pythonPath": "/usr/local/bin/python"}'
+A successful Python Environments API switch returns `apiId: "ms-python.vscode-python-envs"`. A legacy fallback switch returns `apiId: "ms-python.python"`.
+
+## Devcontainer Settings
+
+For Python Environments rollout validation, keep these settings in the target devcontainer or workspace:
+
+```json
+{
+  "python.useEnvironmentsExtension": true,
+  "python-envs.defaultEnvManager": "ms-python.python:venv",
+  "python-envs.workspaceSearchPaths": ["venv_gcubed_*"],
+  "python-envs.terminal.autoActivationType": "off",
+  "python-envs.alwaysUseUv": true
+}
 ```
 
-### Test 3: Valid request with invalid path
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{"pythonPath": "bad path"}'
-```
-
-### Test 4: Invalid request - missing pythonPath parameter
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{}'
-```
-
-### Test 5: Invalid request - empty pythonPath
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{"pythonPath": ""}'
-```
-
-### Test 6: Invalid request - pythonPath is not a string
-``` bash
-curl -X POST http://127.0.0.1:9876/set-interpreter -H "Content-Type: application/json" -d '{"pythonPath": 12345}'
-```
-
-### Test 7: Invalid endpoint
-``` bash
-curl -X GET http://127.0.0.1:9876/wrong-endpoint
-```
+The extension warns when the key rollout settings are missing or mismatched. It does not edit workspace settings automatically.
