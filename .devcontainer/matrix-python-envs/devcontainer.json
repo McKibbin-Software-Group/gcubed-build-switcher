@@ -1,0 +1,52 @@
+{
+  "name": "G-Cubed Build Switcher Matrix - Python Environments",
+  "build": {
+    "context": "../..",
+    "dockerfile": "../Dockerfile",
+    "args": {
+      "PYTHON_VARIANT": "3-3.13-bookworm",
+      "NODE_VERSION": "lts/*",
+      "SWITCHER_TEST_MATRIX": "1",
+      "VENV_SWITCHER_TAG": "${localEnv:VENV_SWITCHER_TAG}",
+      "VENV_SWITCHER_PYTHON_TAG": "${localEnv:VENV_SWITCHER_PYTHON_TAG}",
+      "VENV_SWITCHER_PYTHON_URL": "${localEnv:VENV_SWITCHER_PYTHON_URL}",
+      "VENV_SWITCHER_PYTHON_FILE": "${localEnv:VENV_SWITCHER_PYTHON_FILE}",
+      "VENV_SWITCHER_VSIX_TAG": "${localEnv:VENV_SWITCHER_VSIX_TAG}",
+      "VENV_SWITCHER_VSIX_URL": "${localEnv:VENV_SWITCHER_VSIX_URL}",
+      "VENV_SWITCHER_VSIX_FILE": "${localEnv:VENV_SWITCHER_VSIX_FILE}"
+    }
+  },
+  "runArgs": ["--env-file=${localWorkspaceFolder}/.devcontainer/customer-configuration.env"],
+  "containerEnv": {
+    "WORKSPACE_MOUNT": "${containerWorkspaceFolder}"
+  },
+  "remoteEnv": {
+    "GCUBED_ROOT": "${containerEnv:WORKSPACE_MOUNT}${containerEnv:USER_DATA_SUBDIRECTORY}"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "mechatroner.rainbow-csv",
+        "mhutchie.git-graph",
+        "ms-python.black-formatter",
+        "ms-python.python",
+        "ms-python.vscode-python-envs",
+        "ms-vsliveshare.vsliveshare",
+        "/home/vscode/extensions/gcubed-venv-switcher/gcubed-vscode-venv-switcher.vsix"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.useEnvironmentsExtension": true,
+        "python-envs.pythonProjects": [],
+        "python-envs.defaultEnvManager": "ms-python.python:venv",
+        "python-envs.workspaceSearchPaths": ["venv_gcubed_*"],
+        "python-envs.terminal.autoActivationType": "off",
+        "python-envs.alwaysUseUv": true,
+        "terminal.integrated.cwd": "${workspaceFolder}",
+        "telemetry.telemetryLevel": "off"
+      }
+    }
+  },
+  "onCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/gcubed-setup/gcubed-build-switcher-dev-setup.sh"
+}
