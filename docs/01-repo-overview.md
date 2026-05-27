@@ -103,6 +103,8 @@ The package scripts build a production VSIX and copy it to `release-files/`. For
 - Preserve ambient-Python venv creation in devcontainers until the devcontainer Python strategy changes.
 - Preserve the non-devcontainer Python provider path: wheel `Requires-Python` metadata resolves to the lowest exact matching CPython patch version in the prebuilt manifest, then `uv venv --python <resolved-python>` creates the venv. `.python-version` remains only a deprecated fallback.
 - Future Python-provider work should preserve the ability to use `uv pip` for fast package installs even if interpreter acquisition moves elsewhere.
+- Python Environments extension support should live in the VS Code extension, not the Python package. The Python package should keep requesting a specific `venv_gcubed_*` interpreter over IPC; the VS Code extension should adapt that request to either `ms-python.vscode-python-envs` or the legacy `ms-python.python` API.
+- When enabling the new Python Environments extension in customer devcontainers, use `python-envs.workspaceSearchPaths` for `venv_gcubed_*` discovery and keep `python-envs.terminal.autoActivationType` set to `off` until terminal activation is explicitly validated.
 - The Python package shells out to `git` and `uv`; avoid replacing these with heavier abstractions unless there is a clear reliability or coverage win.
 - Extension tests exercise socket behavior under `vscode-extension/tests/unixSocketServer/`; they mock or isolate socket paths rather than requiring the live VS Code extension.
 - The extension README still mentions older HTTP/port-based examples in places, but the source code currently uses Unix sockets.

@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-05-21
+Last updated: 2026-05-27
 
 ## Immediate Pickup
 
@@ -9,6 +9,38 @@ Last updated: 2026-05-21
 3. Decide how versions should line up across root `pyproject.toml`, `vscode-extension/package.json`, `release-files/pyproject.toml`, and `src/gcubed_build_switcher/__init__.py`.
 4. Confirm release shim behavior: floating `main` dependency versus pinned release ref.
 5. Ensure the customer devcontainer template sets a devcontainer marker such as `GCUBED_DEVCONTAINER=1`, or confirm the target host reliably exposes `DEVCONTAINER`, `REMOTE_CONTAINERS`, or `CODESPACES`.
+6. Run the Python Environments API spike in `docs/ai/python-environments-api-spike.md`: add `ms-python.vscode-python-envs` support while keeping the existing `ms-python.python` API path as a fallback until live devcontainer validation passes.
+7. When rolling out Python Environments support, update the customer devcontainer `.vscode/settings.json` with the settings below.
+
+## Python Environments Rollout Settings
+
+Use these settings when the switcher supports `ms-python.vscode-python-envs`
+and the customer devcontainer is ready to stop disabling the new extension:
+
+```json
+{
+  "python.useEnvironmentsExtension": true,
+  "python-envs.defaultEnvManager": "ms-python.python:venv",
+  "python-envs.workspaceSearchPaths": ["venv_gcubed_*"],
+  "python-envs.terminal.autoActivationType": "off",
+  "python-envs.alwaysUseUv": true
+}
+```
+
+Do not use `python-envs.pythonProjects` to model individual
+`venv_gcubed_*` build environments. The G-Cubed switcher creates and selects
+build-specific venvs dynamically, so the extension should programmatically
+resolve and set the requested interpreter. `python-envs.pythonProjects` is only
+useful if a customer workspace needs explicit stable Python project mappings.
+
+`python-envs.workspaceSearchPaths` is still useful as a fallback so generated
+`venv_gcubed_*` environments appear in the Python Environments UI and manual
+selection flows. Auto-discovery is not the primary switching mechanism.
+
+Keep terminal auto-activation set to `off` for the first rollout. The switcher
+changes the selected interpreter explicitly; terminal startup mutation should
+not be introduced until it has a clear user benefit and has been tested in the
+customer devcontainer shell.
 
 ## Validation To Run
 
@@ -32,6 +64,7 @@ node vscode-extension/tests/live/runSocketTests.js
 
 - Target customer devcontainer assumptions: user IDs, socket permissions, available Python extension, and network access.
 - Devcontainer runtime marker guaranteed by the customer template or host.
+- Whether the customer devcontainer should install `ms-python.vscode-python-envs` explicitly or rely on the Python extension's rollout path.
 - Expected versioning policy for Python package, VS Code extension, release shim, and generated artifacts.
 - Whether release assets should float to `main` or pin to immutable refs.
 - A real prerequisites repo tag for CLI/end-to-end smoke testing.

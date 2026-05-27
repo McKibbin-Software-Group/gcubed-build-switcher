@@ -3,6 +3,7 @@
 ## Near Term
 
 - Fix the extension socket test harness so `npm run test:socket` can run outside VS Code by mocking or isolating the `vscode` module.
+- Complete the Python Environments API spike in `docs/ai/python-environments-api-spike.md` so the extension can use `ms-python.vscode-python-envs` with a legacy `ms-python.python` fallback.
 - Align stale extension docs and package metadata with the Unix socket implementation.
 - Decide and document the authoritative versioning/release model for the Python package, extension package, release shim, and `__version__`.
 - Clarify whether `release-files/pyproject.toml` should install from `main` or a pinned release ref.
