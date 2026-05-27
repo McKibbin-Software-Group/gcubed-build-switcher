@@ -47,6 +47,7 @@
         "ms-python.black-formatter",
         "ms-python.python",
         "ms-python.vscode-python-envs",
+        "openai.chatgpt",
         "ms-vsliveshare.vsliveshare",
         "tamasfe.even-better-toml"
         // The following are not required inside the devcontainer. Don't install them.
@@ -101,7 +102,7 @@
         "terminal.integrated.cwd": "${workspaceFolder}",
         "telemetry.telemetryLevel": "off",
         "workbench.startupEditor": "none",
-        "workbench.colorTheme": "Default Dark Modern",
+        "workbench.colorTheme": "Dark Modern",
         "workbench.editorAssociations": {
           "README.md": "vscode.markdown.preview.editor"
         },
