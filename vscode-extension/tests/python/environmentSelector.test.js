@@ -14,6 +14,7 @@ jest.mock("@vscode/python-extension", () => ({ PythonExtension: { api: jest.fn()
 
 const {
   PYTHON_ENVS_EXTENSION_ID,
+  LEGACY_PYTHON_EXTENSION_ID,
   createFallbackEnvironmentSelector,
   createPythonEnvsEnvironmentSelector,
   createLegacyPythonEnvironmentSelector,
@@ -53,6 +54,7 @@ describe("Python Environments selector", () => {
     expect(pythonEnvsApi.setEnvironment).toHaveBeenCalledWith(scope, environment)
     expect(pythonEnvsApi.getEnvironment).toHaveBeenCalledWith(scope)
     expect(result).toEqual({
+      apiId: PYTHON_ENVS_EXTENSION_ID,
       knownEnvironmentsBeforeSwitch: [environment],
       resolvedEnvironmentBeforeSwitch: environment,
       knownEnvironmentsAfterSwitch: [environment],
@@ -195,9 +197,10 @@ describe("fallback environment selector", () => {
     const fallbackSelector = createFakeSelector("fallback")
     const selector = createFallbackEnvironmentSelector({ primarySelector, fallbackSelector })
 
-    await expect(selector.selectInterpreter("/workspace/project/venv_gcubed_1/bin/python", "gcubed 1")).resolves.toBe(
-      primaryResult
-    )
+    await expect(selector.selectInterpreter("/workspace/project/venv_gcubed_1/bin/python", "gcubed 1")).resolves.toEqual({
+      ...primaryResult,
+      apiId: "primary",
+    })
     expect(fallbackSelector.selectInterpreter).not.toHaveBeenCalled()
   })
 
@@ -213,9 +216,10 @@ describe("fallback environment selector", () => {
     const fallbackSelector = createFakeSelector("fallback", fallbackResult)
     const selector = createFallbackEnvironmentSelector({ primarySelector, fallbackSelector })
 
-    await expect(selector.selectInterpreter("/workspace/project/venv_gcubed_1/bin/python", "gcubed 1")).resolves.toBe(
-      fallbackResult
-    )
+    await expect(selector.selectInterpreter("/workspace/project/venv_gcubed_1/bin/python", "gcubed 1")).resolves.toEqual({
+      ...fallbackResult,
+      apiId: "fallback",
+    })
     expect(fallbackSelector.selectInterpreter).toHaveBeenCalledWith(
       "/workspace/project/venv_gcubed_1/bin/python",
       "gcubed 1"
@@ -238,9 +242,10 @@ describe("fallback environment selector", () => {
     const fallbackSelector = createFakeSelector("fallback", fallbackResult)
     const selector = createFallbackEnvironmentSelector({ primarySelector, fallbackSelector })
 
-    await expect(selector.selectInterpreter("/workspace/project/venv_gcubed_1/bin/python", "gcubed 1")).resolves.toBe(
-      fallbackResult
-    )
+    await expect(selector.selectInterpreter("/workspace/project/venv_gcubed_1/bin/python", "gcubed 1")).resolves.toEqual({
+      ...fallbackResult,
+      apiId: "fallback",
+    })
     expect(fallbackSelector.selectInterpreter).toHaveBeenCalledTimes(1)
   })
 })
@@ -280,6 +285,7 @@ describe("legacy Python environment selector", () => {
       "refresh",
       "resolve:gcubed 1:/workspace/venv_gcubed_1/bin/python",
     ])
+    expect(result.apiId).toBe(LEGACY_PYTHON_EXTENSION_ID)
     expect(result.resolvedEnvironmentAfterSwitch).toEqual({
       id: "resolved",
       path: "/workspace/venv_gcubed_1/bin/python",

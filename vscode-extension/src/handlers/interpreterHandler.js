@@ -93,6 +93,7 @@ async function setValidStartingInterpreter(environmentSelector = createEnvironme
  * @property {boolean} success - Whether the operation succeeded
  * @property {string} [message] - Success message (when success is true)
  * @property {string} [error] - Error message (when success is false)
+ * @property {string} [apiId] - Concrete Python environment API that handled the request
  * @property {string} [requestedPath] - Original requested path
  * @property {string} [knownEnvironments] - List of available environments
  */
@@ -135,6 +136,7 @@ async function switchInterpreter(pythonPath, shortName, environmentSelector = cr
     vscode.window.showInformationMessage(message)
 
     const selectionResult = await environmentSelector.selectInterpreter(absolutePythonPath, displayName)
+    const selectionApiId = selectionResult.apiId || environmentSelector.apiId
     console.info("Known (refreshed) environments before switch: ", selectionResult.knownEnvironmentsBeforeSwitch)
     console.info("Resolved environment before switch: ", selectionResult.resolvedEnvironmentBeforeSwitch)
 
@@ -151,6 +153,7 @@ async function switchInterpreter(pythonPath, shortName, environmentSelector = cr
         success: true,
         message: `Switched to ${pythonPath}`,
         requestedPath: pythonPath,
+        apiId: selectionApiId,
       }
     }
     // Return failure
@@ -158,6 +161,7 @@ async function switchInterpreter(pythonPath, shortName, environmentSelector = cr
       success: false,
       message: `Switch to ${pythonPath} did not appear to work - could not resolve the environment`,
       requestedPath: pythonPath,
+      apiId: selectionApiId,
       knownEnvironments: environmentSelector.formatKnownEnvironments(selectionResult.knownEnvironmentsAfterSwitch),
     }
   } catch (error) {

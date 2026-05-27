@@ -44,6 +44,7 @@ function createEnvironmentSelector() {
 
 /**
  * @typedef {Object} EnvironmentSelectionResult
+ * @property {string} apiId - Concrete selector API that produced this result
  * @property {Array<Object>} knownEnvironmentsBeforeSwitch
  * @property {Object|undefined} resolvedEnvironmentBeforeSwitch
  * @property {Array<Object>} knownEnvironmentsAfterSwitch
@@ -73,7 +74,10 @@ function createFallbackEnvironmentSelector({ primarySelector, fallbackSelector }
 
     async selectInterpreter(absolutePath, displayName) {
       try {
-        const primaryResult = await primarySelector.selectInterpreter(absolutePath, displayName)
+        const primaryResult = withSelectionApiId(
+          await primarySelector.selectInterpreter(absolutePath, displayName),
+          primarySelector.apiId
+        )
         if (primaryResult.resolvedEnvironmentAfterSwitch !== undefined) {
           return primaryResult
         }
@@ -87,7 +91,8 @@ function createFallbackEnvironmentSelector({ primarySelector, fallbackSelector }
         )
       }
 
-      return fallbackSelector.selectInterpreter(absolutePath, displayName)
+      const fallbackResult = await fallbackSelector.selectInterpreter(absolutePath, displayName)
+      return withSelectionApiId(fallbackResult, fallbackSelector.apiId)
     },
 
     async validateStartingInterpreter() {
@@ -133,7 +138,7 @@ function createPythonEnvsEnvironmentSelector({
       const interpreterUri = uriFile(absolutePath)
       const retryOptions = normalizeSelectionRetryOptions(selectionRetry)
 
-      return selectPythonEnvsInterpreterWithRetry({
+      const selectionResult = await selectPythonEnvsInterpreterWithRetry({
         pythonEnvsApi,
         scope,
         interpreterUri,
@@ -143,6 +148,7 @@ function createPythonEnvsEnvironmentSelector({
         wait,
         retryOptions,
       })
+      return withSelectionApiId(selectionResult, PYTHON_ENVS_EXTENSION_ID)
     },
 
     async validateStartingInterpreter() {
@@ -244,6 +250,13 @@ async function selectPythonEnvsInterpreterOnce({ pythonEnvsApi, scope, interpret
     resolvedEnvironmentBeforeSwitch,
     knownEnvironmentsAfterSwitch,
     resolvedEnvironmentAfterSwitch,
+  }
+}
+
+function withSelectionApiId(selectionResult, apiId) {
+  return {
+    ...selectionResult,
+    apiId: selectionResult.apiId || apiId,
   }
 }
 
@@ -355,6 +368,7 @@ function createLegacyPythonEnvironmentSelector({
       const resolvedEnvironmentAfterSwitch = await resolveEnvironment(pythonApi, absolutePath, displayName)
 
       return {
+        apiId: LEGACY_PYTHON_EXTENSION_ID,
         knownEnvironmentsBeforeSwitch,
         resolvedEnvironmentBeforeSwitch,
         knownEnvironmentsAfterSwitch,

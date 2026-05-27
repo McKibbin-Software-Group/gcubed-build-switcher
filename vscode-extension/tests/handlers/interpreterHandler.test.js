@@ -48,6 +48,7 @@ describe("interpreter handler", () => {
       success: true,
       message: "Switched to venv_gcubed_a/bin/python",
       requestedPath: "venv_gcubed_a/bin/python",
+      apiId: "fake",
     })
   })
 
@@ -71,6 +72,7 @@ describe("interpreter handler", () => {
       success: false,
       message: "Switch to venv_gcubed_a/bin/python did not appear to work - could not resolve the environment",
       requestedPath: "venv_gcubed_a/bin/python",
+      apiId: "fake",
       knownEnvironments: ["known environment"],
     })
   })
