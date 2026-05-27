@@ -125,15 +125,16 @@ venvs. Those environments are selected dynamically by build tag. Use
    - Done 2026-05-27: Python Environments happy path, resolution failure,
      selected-environment mismatch, extension-missing fallback, and mixed
      environment-shape extraction have focused unit coverage.
-   - Still useful: unit-test settings diagnostics without writing files.
-   - Unit-test settings diagnostics without writing files.
+   - Done 2026-05-27: rollout settings diagnostics have focused unit coverage
+     without writing workspace settings.
    - Keep socket protocol tests focused on null-terminated JSON framing,
      validation, response handling, timeout, and concurrency.
    - Add a live smoke script for a VS Code/devcontainer host with both
      Microsoft extensions installed.
 
 8. Update docs and release artifacts.
-   - Update stale HTTP wording in extension docs/package metadata.
+   - Done 2026-05-27: stale HTTP wording was removed from extension developer
+     docs and package metadata; the dead `test:http` script was dropped.
    - Update customer devcontainer settings when the spike is proven.
    - Document the fallback/removal policy for the legacy API.
 
@@ -199,8 +200,7 @@ tests boring and lets API-specific tests mock the two Microsoft extensions.
 - The selector currently derives Python Environments scope from the first
   workspace folder, matching existing relative path behavior. Multi-root and
   `GCUBED_ROOT` outside the first workspace need live validation.
-- The extension package still says it switches venvs via local HTTP requests,
-  but the implementation uses Unix sockets.
+- Extension package metadata and developer docs now describe Unix socket IPC.
 
 ### Low
 

@@ -20,19 +20,18 @@ Last updated: 2026-05-27
 - `AGENTS.md` was rewritten as a concise guardrail file on 2026-05-21; runtime flow, environment variables, maintenance notes, and release behavior now live in `docs/01-repo-overview.md`.
 - Initial `git status --short` showed only untracked `.agents/` and `skills-lock.json`.
 - `vscode-extension/node_modules/`, `dist/`, `production/`, and `test/` are present locally.
-- `vscode-extension/package.json` still describes "local HTTP requests" even though the source uses Unix sockets.
-- `vscode-extension/README-extension-developer.md` still contains older HTTP/port examples and stale package command names.
-- `npm run test:http` references `tests/httpServer/jest.config.js`, but no matching test directory was found in the repo scan.
 - On 2026-05-27, the first Python Environments spike slice separated socket protocol handling from interpreter switching. Production passes the real `switchInterpreter`; tests inject a fake request handler.
 - On 2026-05-27, the second spike slice introduced the environment-selection adapter and bound extension activation to a single interpreter handler/selector pair. New plain Jest tests cover the legacy selector flow and handler delegation without Unix socket or VS Code host dependencies.
 - On 2026-05-27, the third spike slice added optional `ms-python.vscode-python-envs` support behind the selector. The extension does not hard-depend on the new extension yet; missing/disabled/incompatible API cases fall back to `ms-python.python`.
+- On 2026-05-27, live smoke validation confirmed the new selector path: the switch response returned `apiId: "ms-python.vscode-python-envs"` for a generated `venv_gcubed_smoke_*` interpreter.
+- On 2026-05-27, the rollout-hardening slice added activation-time diagnostics for key Python Environments settings, removed stale HTTP/port developer docs, updated extension package metadata to Unix socket IPC, and dropped the dead `test:http` script.
 
 ## Known Risks / Gaps
 
 - Version metadata is inconsistent across root package, extension package, release shim, and `src/gcubed_build_switcher/__init__.py`.
 - Extension socket tests need an execution environment that permits Unix domain sockets. The default sandbox returns `EPERM` for AF_UNIX socket creation, so `npm run test:socket` must be run unsandboxed/escalated here.
-- Live end-to-end validation still requires a configured devcontainer or VS Code host with the Microsoft Python extension available.
-- Python Environments rollout still needs live validation with `ms-python.vscode-python-envs`, `python.useEnvironmentsExtension: true`, `python-envs.workspaceSearchPaths: ["venv_gcubed_*"]`, and terminal auto-activation set to `off`.
+- Repeatable live end-to-end validation still needs a documented configured devcontainer or VS Code host with the Microsoft Python extensions available.
+- Broader customer-template validation is still useful, but one live devcontainer smoke switch has confirmed the `ms-python.vscode-python-envs` path.
 - The Python Environments selector currently uses the first workspace folder as the project scope. That matches the existing path-resolution behavior but needs live multi-root/devcontainer validation.
 - Release behavior should be clarified: the release shim currently installs from GitHub `main`, not a pinned release tag or commit.
 - `SERVER_SOCKET_MODE = 0o666` should be confirmed as acceptable for the target devcontainer security model.
@@ -110,5 +109,5 @@ Result:
 
 - Which version source should be authoritative for releases?
 - Should the release shim continue floating to GitHub `main`, or pin to a release tag/commit?
-- Should stale HTTP docs/scripts be removed or updated to Unix socket terminology?
-- What is the right live VS Code/devcontainer smoke path for validating both the legacy and Python Environments API interpreter switchers?
+- What repeatable live VS Code/devcontainer smoke path should be documented for validating both the legacy and Python Environments API interpreter switchers?
+- What date or customer-baseline signal allows removing the legacy `ms-python.python` fallback?

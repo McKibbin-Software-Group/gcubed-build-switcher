@@ -110,4 +110,4 @@ The package scripts build a production VSIX and copy it to `release-files/`. For
 - When enabling the new Python Environments extension in customer devcontainers, use `python-envs.workspaceSearchPaths` for `venv_gcubed_*` discovery and keep `python-envs.terminal.autoActivationType` set to `off` until terminal activation is explicitly validated.
 - The Python package shells out to `git` and `uv`; avoid replacing these with heavier abstractions unless there is a clear reliability or coverage win.
 - Extension tests exercise handler/selector behavior under `vscode-extension/tests/handlers/` and `vscode-extension/tests/python/`, and socket behavior under `vscode-extension/tests/unixSocketServer/`.
-- The extension README still mentions older HTTP/port-based examples in places, but the source code currently uses Unix sockets.
+- Extension docs and package metadata describe Unix socket IPC; older HTTP/port examples were removed on 2026-05-27.
