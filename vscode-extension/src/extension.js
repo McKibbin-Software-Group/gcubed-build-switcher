@@ -8,6 +8,7 @@ const vscode = require("vscode")
 const { EXTENSION_NAME, EXTENSION_LOAD_TIME } = require("./utils/constants")
 const { startUnixSocketServer, gracefullyShutdownServer } = require("./unixSocketServer")
 const { createInterpreterHandler } = require("./handlers/interpreterHandler")
+const { reportPythonEnvsRolloutSettingsDiagnostics } = require("./python/rolloutSettingsDiagnostics")
 
 /** @type {import('net').Server|null} Socket server instance for interpreter switching */
 let server = null
@@ -34,6 +35,7 @@ async function activate(context) {
     context.subscriptions.push({ dispose: deactivate })
 
     vscode.window.showInformationMessage(`${EXTENSION_NAME} extension activated`)
+    reportPythonEnvsRolloutSettingsDiagnostics()
 
     await interpreterHandler.setValidStartingInterpreter()
 
