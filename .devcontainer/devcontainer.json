@@ -2,39 +2,25 @@
   "name": "G-Cubed Build Switcher Development",
   "build": {
     "context": "..",
-    "dockerfile": "./Dockerfile",
+    "dockerfile": "Dockerfile",
     "args": {
-      "VARIANT": "1-3.12",
+      "PYTHON_VARIANT": "3-3.13-bookworm",
       "NODE_VERSION": "lts/*"
     }
   },
-  "runArgs": [
-        "--env-file",
-        "${localWorkspaceFolder}/.devcontainer/customer-configuration.env"
-    ],
+  // Keep customer-like settings in the same place as the baseline template,
+  // then derive workspace-relative values from the devcontainer context.
+  "runArgs": ["--env-file=.devcontainer/customer-configuration.env"],
   "containerEnv": {
-    // Ensure that uv copies dependencies into the venvs - as otherwise venvs are linked from cache
-    // which disappears when the container is rebuilt.
-    // These are 'universal' configuration required by all versions of this devcontainer
-    // Customer-specific configuration is found externally.  If you want to disable the auto
-    // build switching for a customer/devcontainer, set any value for GCUBED_CODE_AUTO_BUILD_SWITCHER_DISABLED
-    // (eg TRUE) in the customer-configuration.env file
-    "UV_LINK_MODE": "copy",
-    "GCUBED_ROOT": "${containerWorkspaceFolder}",
-    "GCUBED_PYTHON_PREREQUISITES_REPO": "https://github.com/McKibbin-Software-Group/python-gcubed-prerequisites",
-    "GCUBED_CODE_PACKAGE_NAME": "gcubed",
-    "RICH_TRACEBACKS": "1"
+    "WORKSPACE_MOUNT": "${containerWorkspaceFolder}"
+  },
+  "remoteEnv": {
+    "GCUBED_ROOT": "${containerEnv:WORKSPACE_MOUNT}${containerEnv:USER_DATA_SUBDIRECTORY}"
   },
   "portsAttributes": {
     "8888": {
       "label": "G-Cubed Online Charts",
       "onAutoForward": "openBrowser"
-    },
-    "9876": {
-      "label": "G-Cubed venv helper",
-      "onAutoForward": "ignore",
-      "visibility": "private",
-      "autoForwardPortsSource": "none"
     }
   },
   "features": {},
@@ -55,6 +41,7 @@
         "mhutchie.git-graph",
         "ms-python.black-formatter",
         "ms-python.python",
+        "ms-python.vscode-python-envs",
         "ms-vsliveshare.vsliveshare",
         "tamasfe.even-better-toml"
         // The following are not required inside the devcontainer. Don't install them.
@@ -99,6 +86,11 @@
         "python.linting.pycodestylePath": "/usr/local/py-utils/bin/pycodestyle",
         "python.linting.pydocstylePath": "/usr/local/py-utils/bin/pydocstyle",
         "python.linting.pylintPath": "/usr/local/py-utils/bin/pylint",
+        "python.useEnvironmentsExtension": true,
+        "python-envs.defaultEnvManager": "ms-python.python:venv",
+        "python-envs.workspaceSearchPaths": ["venv_gcubed_*"],
+        "python-envs.terminal.autoActivationType": "off",
+        "python-envs.alwaysUseUv": true,
 
         "terminal.integrated.inheritEnv": true,
         "terminal.integrated.cwd": "${workspaceFolder}",
@@ -146,8 +138,5 @@
       }
     }
   },
-  // Install any base prerequisites. Note - uv will install anything in requirements.txt to the system context. Assuming
-  // this is needed in all cases.  Otherwise you should install requirements into the appropriate venv.
-  // "postCreateCommand": "npm install && if [ -f requirements.txt ]; then sudo uv pip install --system -r requirements.txt; fi"
-  "postCreateCommand": "if [ -f requirements.txt ]; then sudo $(which uv) pip install --system -r requirements.txt; fi; if [ -f pyproject.toml ]; then sudo $(which uv) pip install --system -e .; fi;echo 'alias ll=\"ls -alh\"' >> ~/.bashrc; echo 'cd() { if [ \"$#\" -eq 0 ]; then command cd \"${containerWorkspaceFolder}\"; else command cd \"$@\"; fi; }' >> ~/.bashrc"
+  "onCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/gcubed-setup/gcubed-build-switcher-dev-setup.sh"
 }

@@ -1,11 +1,11 @@
-ARG VARIANT=1-3.12
-FROM mcr.microsoft.com/devcontainers/python:${VARIANT}
+ARG PYTHON_VARIANT=3-3.13-bookworm
+FROM mcr.microsoft.com/devcontainers/python:${PYTHON_VARIANT}
 
 ARG NODE_VERSION="none"
 ENV NODE_VERSION=${NODE_VERSION}
 
-ARG TZ
-ENV TZ="Australia/Sydney"
+ARG TZ="Australia/Sydney"
+ENV TZ=${TZ}
 
 # Install uv and node if a version is specified. Note, we're pinning a version
 # of uv to ensure the same version is installed in all images. Doing it this way
