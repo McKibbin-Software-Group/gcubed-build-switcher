@@ -3,7 +3,7 @@ const net = require("net")
 const { sendTestMessage } = require("./testUnixSocketServer-client")
 
 
-// Test cases that parallel the HTTP tests
+// Test cases for the Unix socket request handler
 const testCases = [
   {
     name: "Test 1: Valid request with absolute path",
