@@ -29,16 +29,28 @@ const {
  * @throws {Error} If socket file cannot be deleted or server cannot start
  */
 function startUnixSocketServer(options = {}) {
+  if (typeof options === "function") {
+    options = { requestHandler: options }
+  }
+
   const socketPath = options.socketPath || SERVER_SOCKET_PATH
+  const requestHandler = options.requestHandler || createMissingRequestHandler
   console.info(`Starting socket server on ${socketPath}...`)
 
   _deleteStaleSocketFile(socketPath)
 
-  const server = net.createServer(handleClientConnection)
+  const server = net.createServer((clientConnection) => handleClientConnection(clientConnection, requestHandler))
 
   _configureAndStartServer(server, socketPath)
 
   return server
+}
+
+async function createMissingRequestHandler() {
+  return {
+    success: false,
+    error: "No interpreter switch handler configured",
+  }
 }
 
 /**

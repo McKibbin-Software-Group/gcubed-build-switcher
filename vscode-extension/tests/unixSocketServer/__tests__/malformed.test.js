@@ -52,7 +52,11 @@ describe("Malformed Message Tests", () => {
     const client = TestClientFactory.createStandardClient()
     await client.connect(server)
 
-    client.sendMessage({ massive: hugeString })
+    client.sendMessage({
+      action: "set-interpreter",
+      pythonPath: "/tmp/huge-venv/bin/python",
+      massive: hugeString,
+    })
 
     // Server should either close connection or return error
     try {

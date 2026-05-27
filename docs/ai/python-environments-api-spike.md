@@ -41,6 +41,9 @@ to reset the settings should they change / become incompatible).
 5. Keep the Python package unaware of VS Code settings and API details.
 6. Warn from the VS Code extension when expected customer devcontainer settings
    are missing or incompatible.
+7. Keep the top-level repository and package layout stable. The spike may
+   refactor modules inside `vscode-extension/src`, but it should not move the
+   Python package, VS Code extension package, or release payload directories.
 
 ## Rollout Settings
 
@@ -89,8 +92,9 @@ venvs. Those environments are selected dynamically by build tag. Use
    - Warn if `python-envs.workspaceSearchPaths` does not include
      `venv_gcubed_*`.
    - Warn if `python-envs.terminal.autoActivationType` is not `off`.
-   - Do not mutate `.vscode/settings.json` automatically during normal
-     activation. Consider an explicit command only if operators ask for it.
+   - Do not silently mutate `.vscode/settings.json` during normal activation.
+     If useful, offer an explicit user/operator action to apply or reset the
+     recommended settings.
 
 5. Install/dependency decisions.
    - Decide whether the customer devcontainer installs
@@ -100,12 +104,12 @@ venvs. Those environments are selected dynamically by build tag. Use
    - Keep `ms-python.python` available while the fallback path exists.
 
 6. Fix the socket test harness first.
-   - Plain Jest currently fails before tests run because importing the socket
-     server imports `interpreterHandler.js`, which requires VS Code's host
-     module.
-   - Either mock `vscode` and both Python extension APIs, or inject the
-     interpreter-switch handler into the socket server so protocol tests do not
-     import VS Code-dependent modules.
+   - Done 2026-05-27: the socket server accepts an injected request handler.
+     Production passes `switchInterpreter`; socket tests inject a fake handler
+     and no longer import VS Code-dependent modules.
+   - `npm run test:socket` now passes outside the sandbox. The default sandbox
+     blocks AF_UNIX socket creation with `EPERM`, so this validation must run
+     in an unsandboxed/escalated shell here.
 
 7. Add focused tests.
    - Unit-test adapter selection order: new API success, new API unavailable,
@@ -121,16 +125,34 @@ venvs. Those environments are selected dynamically by build tag. Use
    - Update customer devcontainer settings when the spike is proven.
    - Document the fallback/removal policy for the legacy API.
 
-## Suggested Code Shape
+## Layout Constraint
+
+Do not change the top-level repository layout as part of this spike:
+
+```text
+src/gcubed_build_switcher/
+vscode-extension/
+release-files/
+```
+
+Those directories map to separate deliverables and release mechanics. Moving
+them would touch Python packaging, npm scripts, VSIX build output,
+release-file copying, docs, and customer devcontainer assumptions for little
+near-term benefit.
+
+Limit structural changes to `vscode-extension/src`, where the current coupling
+between the socket server and VS Code/Python APIs blocks plain Jest testing.
+
+## Suggested Extension Code Shape
 
 Keep the socket server separate from interpreter selection:
 
 ```text
-unixSocketServer/
+vscode-extension/src/unixSocketServer/
   socketServerManager.js
   socketClientHandler.js
 
-python/
+vscode-extension/src/environmentSelection/
   environmentSelector.js
   pythonEnvsExtension.js
   legacyPythonExtension.js
@@ -143,19 +165,15 @@ tests boring and lets API-specific tests mock the two Microsoft extensions.
 
 ## Extension Review Findings
 
-### High
+### Resolved In First Slice
 
-- `npm run test:socket` cannot load any suites because the socket server import
-  chain reaches `interpreterHandler.js`, which immediately requires `vscode`.
-  The socket protocol has no executable regression coverage until this is
-  fixed.
+- `npm run test:socket` can now load and pass because socket protocol handling
+  no longer imports `interpreterHandler.js` or the VS Code host module.
+- The stale injectable echo-server test harness has been realigned around the
+  current `set-interpreter` socket protocol.
 
 ### Medium
 
-- The socket tests appear to expect an older injectable echo server API:
-  `ServerController.startTestServer(messageHandler, options)` passes arguments
-  that `startUnixSocketServer(options)` no longer accepts. After the `vscode`
-  module problem is fixed, these tests likely need another pass.
 - `setValidStartingInterpreter()` blocks extension activation for about 15
   seconds before validating Python state. That delays readiness of the switcher
   socket path and can make startup behavior feel brittle in remote containers.

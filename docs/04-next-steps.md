@@ -4,12 +4,12 @@ Last updated: 2026-05-27
 
 ## Immediate Pickup
 
-1. Fix `npm run test:socket` by providing a Jest-safe `vscode` mock or separating socket protocol tests from interpreter switching imports.
+1. Introduce the environment-selection adapter described in `docs/ai/python-environments-api-spike.md`, keeping the current `ms-python.python` API behind the adapter first.
 2. Update stale extension-facing docs and metadata from HTTP/port wording to Unix socket wording.
 3. Decide how versions should line up across root `pyproject.toml`, `vscode-extension/package.json`, `release-files/pyproject.toml`, and `src/gcubed_build_switcher/__init__.py`.
 4. Confirm release shim behavior: floating `main` dependency versus pinned release ref.
 5. Ensure the customer devcontainer template sets a devcontainer marker such as `GCUBED_DEVCONTAINER=1`, or confirm the target host reliably exposes `DEVCONTAINER`, `REMOTE_CONTAINERS`, or `CODESPACES`.
-6. Run the Python Environments API spike in `docs/ai/python-environments-api-spike.md`: add `ms-python.vscode-python-envs` support while keeping the existing `ms-python.python` API path as a fallback until live devcontainer validation passes.
+6. Continue the Python Environments API spike: add `ms-python.vscode-python-envs` support while keeping the existing `ms-python.python` API path as a fallback until live devcontainer validation passes. Keep the repo/package layout stable and limit structural refactors to `vscode-extension/src`.
 7. When rolling out Python Environments support, update the customer devcontainer `.vscode/settings.json` with the settings below.
 
 ## Python Environments Rollout Settings
@@ -72,7 +72,7 @@ node vscode-extension/tests/live/runSocketTests.js
 ## Blockers
 
 - No docs blocker remains after the baseline setup.
-- Extension socket test validation is blocked by missing `vscode` module resolution in Jest.
+- Extension socket tests require an execution environment that permits Unix domain sockets; the default sandbox returns `EPERM` for AF_UNIX socket creation, so run them unsandboxed/escalated.
 - Live end-to-end validation is blocked without a configured VS Code/devcontainer environment.
 
 ## Good Stopping Point

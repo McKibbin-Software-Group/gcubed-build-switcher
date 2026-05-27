@@ -9,7 +9,7 @@ Last updated: 2026-05-27
 - `release-files/pyproject.toml` version: `1.2.2` and installs `gcubed-build-switcher` from GitHub `main`.
 - In devcontainers, Python venv creation uses the ambient Python and skips wheel `Requires-Python`/`.python-version` interpreter acquisition. Outside devcontainers, it still prefers wheel `Requires-Python` metadata, resolves the lowest matching exact CPython patch version from the prebuilt manifest, and only uses `.python-version` as a deprecated fallback.
 - Generated build venvs install `gcubed-build-switcher` and `rich` so scripts can continue importing the switcher after VS Code changes interpreter.
-- Python and extension IPC use null-terminated UTF-8 JSON over a Unix domain socket.
+- Python and extension IPC use null-terminated UTF-8 JSON over a Unix domain socket. The socket server now accepts an injected request handler, so socket protocol tests can run in plain Jest without importing the VS Code host module.
 - A Python Environments API spike is documented in `docs/ai/python-environments-api-spike.md`; the intended rollout keeps the Python package on IPC and moves new/legacy VS Code API selection behind an extension-owned adapter.
 - Root `AGENTS.md` is intentionally lean and serves as repo-local agent guardrails; durable project facts live in `docs/`.
 
@@ -22,11 +22,12 @@ Last updated: 2026-05-27
 - `vscode-extension/package.json` still describes "local HTTP requests" even though the source uses Unix sockets.
 - `vscode-extension/README-extension-developer.md` still contains older HTTP/port examples and stale package command names.
 - `npm run test:http` references `tests/httpServer/jest.config.js`, but no matching test directory was found in the repo scan.
+- On 2026-05-27, the first Python Environments spike slice separated socket protocol handling from interpreter switching. Production passes the real `switchInterpreter`; tests inject a fake request handler.
 
 ## Known Risks / Gaps
 
 - Version metadata is inconsistent across root package, extension package, release shim, and `src/gcubed_build_switcher/__init__.py`.
-- Extension socket tests currently cannot load because Jest cannot resolve the VS Code host module. A follow-up review also found the test harness still appears to expect an older injectable echo server API.
+- Extension socket tests need an execution environment that permits Unix domain sockets. The default sandbox returns `EPERM` for AF_UNIX socket creation, so `npm run test:socket` must be run unsandboxed/escalated here.
 - Live end-to-end validation still requires a configured devcontainer or VS Code host with the Microsoft Python extension available.
 - Python Environments rollout needs live validation with `ms-python.vscode-python-envs`, `python.useEnvironmentsExtension: true`, `python-envs.workspaceSearchPaths: ["venv_gcubed_*"]`, and terminal auto-activation set to `off`.
 - Release behavior should be clarified: the release shim currently installs from GitHub `main`, not a pinned release tag or commit.
@@ -53,19 +54,25 @@ python3 -m unittest discover -s tests -v
   - No CLI smoke test was run because it requires real G-Cubed environment variables, prerequisite repo access, and a build tag.
   - No live VS Code interpreter-switch validation was run.
 
-Additional validation on 2026-05-27:
+Additional validation on 2026-05-27 after the first spike slice:
 
 ```bash
 cd vscode-extension
 npm run test:socket
+npm run build
+
+cd ..
+python3 -m unittest discover -s tests -v
 ```
 
-Result: failed before running tests because plain Jest cannot resolve the VS
-Code host module imported by `src/handlers/interpreterHandler.js`.
+Result:
+  - `npm run test:socket`: passed, 5 suites / 11 tests. Required an escalated/unsandboxed run because the default sandbox blocks Unix domain sockets under `/tmp`.
+  - `npm run build`: passed.
+  - Python unit discovery: passed, 22 tests.
 
 ## Open Questions
 
 - Which version source should be authoritative for releases?
 - Should the release shim continue floating to GitHub `main`, or pin to a release tag/commit?
 - Should stale HTTP docs/scripts be removed or updated to Unix socket terminology?
-- Should Jest mock `vscode` for socket tests, or should socket tests avoid importing the interpreter handler directly?
+- What is the right live VS Code/devcontainer smoke path for validating both the legacy and Python Environments API interpreter switchers?

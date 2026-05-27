@@ -2,8 +2,8 @@
 
 ## Near Term
 
-- Fix the extension socket test harness so `npm run test:socket` can run outside VS Code by mocking or isolating the `vscode` module.
-- Complete the Python Environments API spike in `docs/ai/python-environments-api-spike.md` so the extension can use `ms-python.vscode-python-envs` with a legacy `ms-python.python` fallback.
+- Introduce the environment-selection adapter described in `docs/ai/python-environments-api-spike.md`.
+- Complete the Python Environments API spike so the extension can use `ms-python.vscode-python-envs` with a legacy `ms-python.python` fallback.
 - Align stale extension docs and package metadata with the Unix socket implementation.
 - Decide and document the authoritative versioning/release model for the Python package, extension package, release shim, and `__version__`.
 - Clarify whether `release-files/pyproject.toml` should install from `main` or a pinned release ref.
@@ -24,11 +24,12 @@
 ## Non-Goals
 
 - Do not replace `git` and `uv` shell-outs without a concrete reliability or support win.
+- Do not change the top-level `src/gcubed_build_switcher/`, `vscode-extension/`, or `release-files/` layout as part of the Python Environments API spike; keep refactors scoped inside `vscode-extension/src`.
 - Do not remove existing generated venvs or cached Python builds as part of ordinary development.
 - Do not hand-edit VSIX artifacts.
 
 ## Sequencing Notes
 
-1. Make validation trustworthy first, especially the extension socket tests.
+1. Keep socket validation trustworthy while moving interpreter selection behind an adapter.
 2. Clean up stale docs/scripts after the current behavior is captured.
 3. Resolve release/version ownership before the next real release.

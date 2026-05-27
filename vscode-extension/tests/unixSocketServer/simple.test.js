@@ -24,13 +24,18 @@ describe("Simple Socket Test", () => {
     await client.connect(server)
     console.log("Client connected successfully")
 
-    client.sendMessage({ test: "message" })
+    client.sendMessage({
+      action: "set-interpreter",
+      pythonPath: "/tmp/test-venv/bin/python",
+      test: "message",
+    })
 
     const response = await client.waitForResponse()
     console.log(`Response received: ${response}`)
 
     const parsedResponse = JSON.parse(response)
     expect(parsedResponse.success).toBe(true)
+    expect(parsedResponse.requestedPath).toBe("/tmp/test-venv/bin/python")
 
     client.end()
   })

@@ -59,14 +59,18 @@ describe("Edge Case Tests", () => {
     const client = TestClientFactory.createStandardClient({ timeout: 8000 })
     await client.connect(server)
 
-    const message = JSON.stringify({ test: "slow client" })
+    const message = JSON.stringify({
+      action: "set-interpreter",
+      pythonPath: "/tmp/slow-venv/bin/python",
+      test: "slow client",
+    })
     const socket = await client.getRawSocket()
 
     // Write character by character with delays
     for (let i = 0; i < message.length; i++) {
       socket.write(message[i])
       // Small delay between characters
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise((resolve) => setTimeout(resolve, 5))
     }
 
     // Finally send terminator

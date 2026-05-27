@@ -25,9 +25,9 @@ describe("Multiple Message Tests", () => {
 
     // Send multiple messages in one transmission
     const messages = [
-      { id: 1, content: "first message" },
-      { id: 2, content: "second message" }, // This should be ignored
-      { id: 3, content: "third message" }, // This should be ignored
+      { action: "set-interpreter", pythonPath: "/tmp/first-venv/bin/python", id: 1, content: "first message" },
+      { action: "set-interpreter", pythonPath: "/tmp/second-venv/bin/python", id: 2, content: "second message" },
+      { action: "set-interpreter", pythonPath: "/tmp/third-venv/bin/python", id: 3, content: "third message" },
     ]
 
     client.sendMultipleMessages(messages)
@@ -48,7 +48,11 @@ describe("Multiple Message Tests", () => {
     const client = TestClientFactory.createStandardClient()
     await client.connect(server)
 
-    const message = JSON.stringify({ test: "fragmented message" })
+    const message = JSON.stringify({
+      action: "set-interpreter",
+      pythonPath: "/tmp/fragmented-venv/bin/python",
+      test: "fragmented message",
+    })
     const socket = await client.getRawSocket()
 
     // Fragment the message into chunks

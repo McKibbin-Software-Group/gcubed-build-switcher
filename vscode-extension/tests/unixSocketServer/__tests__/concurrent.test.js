@@ -25,7 +25,12 @@ describe("Concurrent Connection Tests", () => {
 
     // Send messages simultaneously
     const responsePromises = clients.map((client, index) => {
-      client.sendMessage({ clientId: index, timestamp: Date.now() })
+      client.sendMessage({
+        action: "set-interpreter",
+        pythonPath: `/tmp/test-venv-${index}/bin/python`,
+        clientId: index,
+        timestamp: Date.now(),
+      })
       return client.waitForResponse().then(JSON.parse)
     })
 
@@ -48,14 +53,18 @@ describe("Concurrent Connection Tests", () => {
 
     // This will either throw on the excess connections or return rejected connections
     try {
-      const clients = await TestClientFactory.createMultipleClients(excessClients)
+      const clients = await TestClientFactory.createMultipleClients(excessClients, server)
 
       // If we get here, test the last clients for rejection responses
       const lastThreeClients = clients.slice(-3)
 
       const responses = await Promise.all(
         lastThreeClients.map((client) => {
-          client.sendMessage({ test: "excess connection" })
+          client.sendMessage({
+            action: "set-interpreter",
+            pythonPath: "/tmp/excess-venv/bin/python",
+            test: "excess connection",
+          })
           return client
             .waitForResponse()
             .then(JSON.parse)

@@ -7,7 +7,7 @@
 const vscode = require("vscode")
 const { EXTENSION_NAME, EXTENSION_LOAD_TIME } = require("./utils/constants")
 const { startUnixSocketServer, gracefullyShutdownServer } = require("./unixSocketServer")
-const { setValidStartingInterpreter } = require("./handlers/interpreterHandler")
+const { setValidStartingInterpreter, switchInterpreter } = require("./handlers/interpreterHandler")
 
 /** @type {import('net').Server|null} Socket server instance for interpreter switching */
 let server = null
@@ -25,7 +25,7 @@ async function activate(context) {
   console.log(`${EXTENSION_NAME} extension activated (took ${loadToActivateTime}ms since load)`)
 
   try {
-    server = startUnixSocketServer()
+    server = startUnixSocketServer({ requestHandler: switchInterpreter })
 
     console.log(`Interpreter switcher socket server listening`)
 

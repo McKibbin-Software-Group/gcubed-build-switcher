@@ -6,8 +6,6 @@
 
 "use strict"
 
-const { switchInterpreter } = require("../handlers/interpreterHandler")
-
 const {
   MAX_CONCURRENT_CLIENT_CONNECTIONS,
   MAX_BUFFER_SIZE,
@@ -23,9 +21,10 @@ const {
  * Enforces connection limits, processes requests, and ensures proper cleanup
  *
  * @param {net.Socket} clientSocketConnection - Active client socket connection
+ * @param {Function} requestHandler - Function that handles a validated switch request
  * @returns {Promise<void>}
  */
-async function handleClientConnection(clientSocketConnection) {
+async function handleClientConnection(clientSocketConnection, requestHandler) {
   // Check connection limit BEFORE adding to active connections
   if (activeConnections.size >= MAX_CONCURRENT_CLIENT_CONNECTIONS) {
     console.warn(
@@ -53,7 +52,7 @@ async function handleClientConnection(clientSocketConnection) {
 
     if (!requestObject.isValid) throw new Error(requestObject.error)
 
-    const response = await switchInterpreter(requestObject.pythonPath, requestObject.shortName)
+    const response = await requestHandler(requestObject.pythonPath, requestObject.shortName, requestObject)
     await sendJsonResponseAndWait(clientSocketConnection, response)
   } catch (error) {
     handleClientError(clientSocketConnection, error)
@@ -79,7 +78,7 @@ function receiveClientRequest(clientSocketConnection) {
     // reject with an error and close down the client connection
     const messageTimeout = setTimeout(() => {
       console.warn(`Message timed out after ${INCOMING_MESSAGE_COMPLETION_TIMEOUT_MS}ms`)
-      firmlyCloseClientConnection(clientSocketConnection)
+      clientSocketConnection.removeListener("data", dataEventHandler)
       reject(new Error("Connection timeout - message incomplete"))
     }, INCOMING_MESSAGE_COMPLETION_TIMEOUT_MS)
 
@@ -97,6 +96,13 @@ function receiveClientRequest(clientSocketConnection) {
       if (terminatorIndex !== -1) {
         clientSocketConnection.removeListener("data", dataEventHandler)
         clearTimeout(messageTimeout)
+
+        const messageSize = (messageBuffer ? messageBuffer.length : 0) + terminatorIndex
+        if (messageSize > MAX_BUFFER_SIZE) {
+          firmlyCloseClientConnection(clientSocketConnection)
+          reject(new Error(`Message size exceeds limit of ${MAX_BUFFER_SIZE} bytes`))
+          return
+        }
 
         // 2. Then process data (might throw)
         let messageString = !messageBuffer
@@ -126,8 +132,8 @@ function receiveClientRequest(clientSocketConnection) {
       // Buffer overflow check
       const totalSize = (messageBuffer ? messageBuffer.length : 0) + chunk.length
       if (totalSize > MAX_BUFFER_SIZE) {
+        clientSocketConnection.removeListener("data", dataEventHandler)
         clearTimeout(messageTimeout)
-        firmlyCloseClientConnection(clientSocketConnection)
         reject(new Error(`Message size exceeds limit of ${MAX_BUFFER_SIZE} bytes`))
         return
       }
@@ -157,7 +163,6 @@ function startListeners(clientSocketConnection) {
   clientSocketConnection.once("close", () => {
     clientSocketConnection.removeAllListeners()
     activeConnections.delete(clientSocketConnection)
-    console.info(`Client connection closed (active: ${activeConnections.size})`)
   })
 }
 
@@ -192,7 +197,11 @@ function validateClientRequest(requestObject) {
     // Extract action and handle accordingly
     const action = requestObject.action || ""
 
-    if (action === "set-interpreter" && requestObject.pythonPath) {
+    if (
+      action === "set-interpreter" &&
+      typeof requestObject.pythonPath === "string" &&
+      requestObject.pythonPath.trim() !== ""
+    ) {
       requestObject.isValid = true
       return requestObject
     } else {
@@ -218,6 +227,15 @@ function validateClientRequest(requestObject) {
  * @param {Function} [callback] - Optional callback when write completes
  */
 function sendJsonResponse(clientSocketConnection, responseObject, callback) {
+  if (
+    clientSocketConnection.destroyed ||
+    clientSocketConnection.writableDestroyed ||
+    clientSocketConnection.writableEnded
+  ) {
+    if (callback) callback(new Error("Client socket is already closed"))
+    return
+  }
+
   clientSocketConnection.write(
     Buffer.concat([Buffer.from(JSON.stringify(responseObject), "utf8"), Buffer.from([NULL_BYTE])]),
     callback
@@ -267,12 +285,13 @@ function firmlyCloseClientConnection(clientSocketConnection) {
 
   // Always check after timeout to ensure the socket fully closed
   // Don't care if this is redundant. Belts & braces!
-  setTimeout(() => {
+  const forceCloseTimer = setTimeout(() => {
     if (!socket.destroyed) {
       console.warn("Socket didn't close gracefully within timeout, forcing closure")
       socket.destroy()
     }
   }, FIRM_SOCKET_CLOSE_TIMEOUT)
+  if (forceCloseTimer.unref) forceCloseTimer.unref()
 
   // the close eventListener will release resources when either end() or destroy() is successful
   socket.end()

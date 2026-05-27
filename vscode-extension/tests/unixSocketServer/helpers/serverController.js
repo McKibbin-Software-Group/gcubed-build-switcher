@@ -23,30 +23,25 @@ class ServerController {
       }
     } catch (e) {}
 
-    const defaultHandler = (message, sendResponse) => {
-      try {
-        const responseData = {
-          success: true,
-          originalMessage: JSON.parse(message),
-          timestamp: new Date().toISOString(),
-        };
-
-        if (options.responseDelay) {
-          setTimeout(() => sendResponse(JSON.stringify(responseData)), options.responseDelay);
-        } else {
-          sendResponse(JSON.stringify(responseData));
-        }
-      } catch (error) {
-        sendResponse(JSON.stringify({
-          success: false,
-          error: error.message
-        }));
+    const defaultHandler = (pythonPath, shortName, requestObject) => {
+      const responseData = {
+        success: true,
+        requestedPath: pythonPath,
+        shortName,
+        originalMessage: requestObject,
+        timestamp: new Date().toISOString(),
       }
+
+      if (options.responseDelay) {
+        return new Promise((resolve) => setTimeout(() => resolve(responseData), options.responseDelay))
+      }
+
+      return responseData
     };
 
-    // Use the new parameter option in serverLifecycle
-    const server = startUnixSocketServer(messageHandler || defaultHandler, {
-      socketPath: testSocketPath
+    const server = startUnixSocketServer({
+      socketPath: testSocketPath,
+      requestHandler: messageHandler || defaultHandler,
     });
 
     // Wait for server to be ready - fixed method call
