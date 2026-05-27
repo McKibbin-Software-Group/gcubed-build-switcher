@@ -11,6 +11,7 @@ scratch/
 venv_gcubed*
 
 # Package build/install files
+build/
 *.egg-info/
 
 # Any CSV files that are diagnostics from a model run
