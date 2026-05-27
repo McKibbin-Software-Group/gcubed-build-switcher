@@ -9,23 +9,27 @@ const { VENV_NAME_PREFIX } = require("../utils/constants")
 const vscode = require("vscode")
 const path = require("path")
 const { delay } = require("../utils/common")
-const {
-  getPythonApi,
-  refreshPythonEnvironments,
-  switchPythonEnvironment,
-  formatEnvironmentsAsList,
-  resolvePythonEnvironment,
-  validateStartingPythonInterpreter,
-} = require("../python/pythonExtension")
+const { createEnvironmentSelector } = require("../python/environmentSelector")
 
-async function setValidStartingInterpreter() {
+/**
+ * Creates interpreter switching functions bound to one environment selector.
+ *
+ * @param {import("../python/environmentSelector").EnvironmentSelector} [environmentSelector]
+ * @returns {{switchInterpreter: Function, setValidStartingInterpreter: Function}}
+ */
+function createInterpreterHandler(environmentSelector = createEnvironmentSelector()) {
+  return {
+    switchInterpreter: (pythonPath, shortName) => switchInterpreter(pythonPath, shortName, environmentSelector),
+    setValidStartingInterpreter: () => setValidStartingInterpreter(environmentSelector),
+  }
+}
+
+async function setValidStartingInterpreter(environmentSelector = createEnvironmentSelector()) {
   try {
-    const pythonApi = await getPythonApi()
-
     // wait a while to give the Python extension time to scan for venvs & set itself up properly
     await delay(15000)
 
-    const validationResult = await validateStartingPythonInterpreter(pythonApi)
+    const validationResult = await environmentSelector.validateStartingInterpreter()
     let message
 
     console.info("Validating initial Python interpreter...")
@@ -47,7 +51,7 @@ async function setValidStartingInterpreter() {
         vscode.window.showInformationMessage(message)
         console.info(message)
 
-        const switchResult = await switchInterpreter(defaultInterpreterPath)
+        const switchResult = await switchInterpreter(defaultInterpreterPath, undefined, environmentSelector)
         if (switchResult.success) {
           vscode.window.showInformationMessage(switchResult.message)
           return
@@ -55,12 +59,15 @@ async function setValidStartingInterpreter() {
       }
 
       // Try Hail Mary...
-      const alternativeGCubedVenv = getFirstGcubedVenvPathFromKnownVenvs(validationResult.knownVenvs)
+      const alternativeGCubedVenv = environmentSelector.getFirstEnvironmentPathContaining(
+        validationResult.knownVenvs,
+        VENV_NAME_PREFIX
+      )
       if (alternativeGCubedVenv) {
         message = `Trying Hail-Mary G-Cubed venv path ${alternativeGCubedVenv}`
         vscode.window.showInformationMessage(message)
         console.log(message)
-        const switchResult = await switchInterpreter(alternativeGCubedVenv)
+        const switchResult = await switchInterpreter(alternativeGCubedVenv, undefined, environmentSelector)
         if (switchResult.success) {
           vscode.window.showInformationMessage(switchResult.message)
           return
@@ -79,20 +86,6 @@ async function setValidStartingInterpreter() {
     vscode.window.showErrorMessage(`Failed to set Python interpreter: ${error.message || String(error)}`)
     return false
   }
-
-  /**
-   * Gets the first G-Cubed virtual environment path if available
-   * @param {Array} knownVenvs - List of known Python environments
-   * @returns {string|undefined} Path to first G-Cubed venv found, or undefined if not found
-   */
-  function getFirstGcubedVenvPathFromKnownVenvs(knownVenvs) {
-    try {
-      return knownVenvs.find((venv) => venv.internal.path.includes(VENV_NAME_PREFIX)).internal.path
-    } catch {
-      // do nothing - no valid venv definition
-    }
-    return undefined
-  }
 }
 
 /**
@@ -107,9 +100,10 @@ async function setValidStartingInterpreter() {
  * Core function to handle Python interpreter switching
  * @param {string} pythonPath - Path to the Python interpreter
  * @param {string} [shortName] - Optional display name for the environment
+ * @param {import("../python/environmentSelector").EnvironmentSelector} [environmentSelector]
  * @returns {Promise<InterpreterSwitchResult>} Result of the operation
  */
-async function switchInterpreter(pythonPath, shortName) {
+async function switchInterpreter(pythonPath, shortName, environmentSelector = createEnvironmentSelector()) {
   console.debug(`switchInterpreter called with pythonPath: ${pythonPath}, shortName: ${shortName || "(none)"}`)
   // Validate input
   if (!pythonPath || typeof pythonPath !== "string" || pythonPath.trim() === "") {
@@ -133,30 +127,24 @@ async function switchInterpreter(pythonPath, shortName) {
     const absolutePythonPath = resolveAbsolutePath(pythonPath)
     console.info(`Activating interpreter: ${pythonPath} (resolves to: ${absolutePythonPath})`)
 
-    // Get Python API
-    const pythonApi = await getPythonApi()
-
-    let knownEnvironments = await refreshPythonEnvironments(pythonApi)
-    console.info("Known (refreshed) environments before switch: ", knownEnvironments)
-    let resolvedEnvironment = await resolvePythonEnvironment(pythonApi, absolutePythonPath, shortName || pythonPath)
-    console.info("Resolved environment before switch: ", resolvedEnvironment)
+    const displayName = shortName || pythonPath
 
     // Try to switch interpreter regardless of whether or not the Python extension thinks it can see it
-    const message = `Activating: '${shortName || pythonPath}'`
+    const message = `Activating: '${displayName}'`
     console.log(message)
     vscode.window.showInformationMessage(message)
 
-    await switchPythonEnvironment(pythonApi, absolutePythonPath)
+    const selectionResult = await environmentSelector.selectInterpreter(absolutePythonPath, displayName)
+    console.info("Known (refreshed) environments before switch: ", selectionResult.knownEnvironmentsBeforeSwitch)
+    console.info("Resolved environment before switch: ", selectionResult.resolvedEnvironmentBeforeSwitch)
 
     // and refresh/resolve again to get the best chance that we actually know if the environment actually switched...
-    knownEnvironments = await refreshPythonEnvironments(pythonApi)
-    console.info("Known (refreshed) environments after switch: ", knownEnvironments)
-    resolvedEnvironment = await resolvePythonEnvironment(pythonApi, absolutePythonPath, shortName || pythonPath)
-    console.info("Resolved environment after switch: ", resolvedEnvironment)
+    console.info("Known (refreshed) environments after switch: ", selectionResult.knownEnvironmentsAfterSwitch)
+    console.info("Resolved environment after switch: ", selectionResult.resolvedEnvironmentAfterSwitch)
 
-    if (resolvedEnvironment !== undefined) {
+    if (selectionResult.resolvedEnvironmentAfterSwitch !== undefined) {
       // Return success
-      const message = `Successfully activated: '${shortName || pythonPath}'`
+      const message = `Successfully activated: '${displayName}'`
       console.log(message)
       vscode.window.showInformationMessage(message)
       return {
@@ -170,7 +158,7 @@ async function switchInterpreter(pythonPath, shortName) {
       success: false,
       message: `Switch to ${pythonPath} did not appear to work - could not resolve the environment`,
       requestedPath: pythonPath,
-      knownEnvironments: formatEnvironmentsAsList(knownEnvironments),
+      knownEnvironments: environmentSelector.formatKnownEnvironments(selectionResult.knownEnvironmentsAfterSwitch),
     }
   } catch (error) {
     console.error("Error using Python API:", error)
@@ -201,6 +189,8 @@ function resolveAbsolutePath(requestedPythonPath) {
 }
 
 module.exports = {
+  createInterpreterHandler,
   switchInterpreter,
   setValidStartingInterpreter,
+  resolveAbsolutePath,
 }

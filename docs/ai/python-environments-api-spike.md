@@ -67,10 +67,11 @@ venvs. Those environments are selected dynamically by build tag. Use
 ## Implementation Todos
 
 1. Introduce an environment-selection adapter in the VS Code extension.
-   - Keep IPC request and response shape stable.
-   - Expose a small interface such as `selectInterpreter(path, scope,
-     shortName)`, `resolveInterpreter(path, scope)`, and
-     `getCurrentInterpreter(scope)`.
+   - Done 2026-05-27: `vscode-extension/src/python/environmentSelector.js`
+     wraps the current legacy API behind `selectInterpreter(...)`,
+     `validateStartingInterpreter()`, known-environment formatting, and
+     fallback path extraction.
+   - IPC request and response shape stayed stable.
 
 2. Add a Python Environments implementation.
    - Activate `ms-python.vscode-python-envs`.
@@ -81,9 +82,11 @@ venvs. Those environments are selected dynamically by build tag. Use
      environment's executable/environment path to the requested interpreter.
 
 3. Preserve the legacy implementation.
-   - Move current `@vscode/python-extension` calls behind the same adapter.
-   - Keep `updateActiveEnvironmentPath(path)` fallback behavior.
-   - Keep startup validation working until it can be simplified.
+   - Done 2026-05-27: current `@vscode/python-extension` calls moved behind
+     the selector adapter.
+   - `updateActiveEnvironmentPath(path)` fallback behavior is preserved.
+   - Startup validation still works through the adapter and can be simplified
+     after the new API path is live-tested.
 
 4. Make settings monitoring extension-owned.
    - On activation, read workspace settings with VS Code configuration APIs.
@@ -112,8 +115,12 @@ venvs. Those environments are selected dynamically by build tag. Use
      in an unsandboxed/escalated shell here.
 
 7. Add focused tests.
-   - Unit-test adapter selection order: new API success, new API unavailable,
-     new API resolve failure, legacy fallback success, all paths fail.
+   - Done 2026-05-27: legacy selector flow and interpreter-handler delegation
+     have plain Jest unit coverage under `vscode-extension/tests/python/` and
+     `vscode-extension/tests/handlers/`.
+   - Unit-test adapter selection order once the new implementation exists: new
+     API success, new API unavailable, new API resolve failure, legacy fallback
+     success, all paths fail.
    - Unit-test settings diagnostics without writing files.
    - Keep socket protocol tests focused on null-terminated JSON framing,
      validation, response handling, timeout, and concurrency.
@@ -152,7 +159,7 @@ vscode-extension/src/unixSocketServer/
   socketServerManager.js
   socketClientHandler.js
 
-vscode-extension/src/environmentSelection/
+vscode-extension/src/python/
   environmentSelector.js
   pythonEnvsExtension.js
   legacyPythonExtension.js
@@ -171,15 +178,18 @@ tests boring and lets API-specific tests mock the two Microsoft extensions.
   no longer imports `interpreterHandler.js` or the VS Code host module.
 - The stale injectable echo-server test harness has been realigned around the
   current `set-interpreter` socket protocol.
+- `interpreterHandler.js` now depends on the environment selector adapter
+  instead of directly orchestrating legacy Python extension API calls.
+- The startup fallback no longer assumes only `venv.internal.path`; fallback
+  path extraction is normalized behind the adapter.
 
 ### Medium
 
 - `setValidStartingInterpreter()` blocks extension activation for about 15
   seconds before validating Python state. That delays readiness of the switcher
   socket path and can make startup behavior feel brittle in remote containers.
-- `setValidStartingInterpreter()` assumes legacy environment shapes such as
-  `venv.internal.path`. The new Python Environments API uses a different object
-  shape, so startup fallback should move behind the adapter.
+- Startup validation still depends on legacy API behavior until the
+  `ms-python.vscode-python-envs` selector implementation is added.
 - The extension package still says it switches venvs via local HTTP requests,
   but the implementation uses Unix sockets.
 

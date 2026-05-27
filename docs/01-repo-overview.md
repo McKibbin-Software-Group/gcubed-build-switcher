@@ -16,7 +16,7 @@ This repo ships the G-Cubed build switcher used by customer devcontainers. It le
 - VS Code extension: `vscode-extension/`
   - Starts a Unix domain socket server on startup.
   - Parses one null-terminated JSON request per connection.
-  - Uses the Microsoft Python extension API to refresh, resolve, and switch interpreters.
+  - Routes interpreter switching through an extension-owned environment selector adapter. The current selector preserves the legacy `ms-python.python` API path; the Python Environments implementation is planned behind the same adapter.
 - Release payload: `release-files/`
   - Contains artifacts consumed by the G-Cubed devcontainer template from the GitHub `latest` release.
 
@@ -30,13 +30,15 @@ This repo ships the G-Cubed build switcher used by customer devcontainers. It le
 6. Outside devcontainers, wheel `Requires-Python` metadata is preferred for interpreter selection; `.python-version` is only a deprecated fallback when wheels do not declare `Requires-Python`.
 7. Any `*.whl` and `requirements*.txt` files found in the tag are installed into the build venv.
 8. `vscode.set_vscode_python_interpreter()` sends a null-terminated JSON message over `GCUBED_VENV_SOCKET_PATH` to request `set-interpreter`.
-9. The VS Code extension receives the request in `vscode-extension/src/unixSocketServer/`, then `handlers/interpreterHandler.js` refreshes/resolves Python environments and calls the Python extension API to update the active interpreter path.
+9. The VS Code extension receives the request in `vscode-extension/src/unixSocketServer/`, then `handlers/interpreterHandler.js` resolves the path and asks `src/python/environmentSelector.js` to refresh, resolve, and select the interpreter through the active Microsoft API implementation.
 
 ## Directory Map
 
 - `src/gcubed_build_switcher/`: Python runtime package and CLI.
 - `tests/`: Python unit tests, currently centered on Python provider, wheel metadata, and venv behavior.
 - `vscode-extension/src/`: VS Code extension source.
+- `vscode-extension/src/python/environmentSelector.js`: adapter seam for legacy and future Python Environments API selection.
+- `vscode-extension/tests/handlers/` and `vscode-extension/tests/python/`: plain Jest unit tests for interpreter handler and selector behavior.
 - `vscode-extension/tests/unixSocketServer/`: Jest socket/protocol tests.
 - `vscode-extension/tests/live/`: live socket probe for an installed/running extension.
 - `release-files/`: files attached to the GitHub release consumed by devcontainer builds.
@@ -74,6 +76,7 @@ The CLI command needs real target env vars such as `GCUBED_ROOT`, `GCUBED_PYTHON
 cd vscode-extension
 npm install
 npm run build
+npm run test:unit
 npm run test:socket
 npm run package:test
 ```
@@ -106,5 +109,5 @@ The package scripts build a production VSIX and copy it to `release-files/`. For
 - Python Environments extension support should live in the VS Code extension, not the Python package. The Python package should keep requesting a specific `venv_gcubed_*` interpreter over IPC; the VS Code extension should adapt that request to either `ms-python.vscode-python-envs` or the legacy `ms-python.python` API.
 - When enabling the new Python Environments extension in customer devcontainers, use `python-envs.workspaceSearchPaths` for `venv_gcubed_*` discovery and keep `python-envs.terminal.autoActivationType` set to `off` until terminal activation is explicitly validated.
 - The Python package shells out to `git` and `uv`; avoid replacing these with heavier abstractions unless there is a clear reliability or coverage win.
-- Extension tests exercise socket behavior under `vscode-extension/tests/unixSocketServer/`; they mock or isolate socket paths rather than requiring the live VS Code extension.
+- Extension tests exercise handler/selector behavior under `vscode-extension/tests/handlers/` and `vscode-extension/tests/python/`, and socket behavior under `vscode-extension/tests/unixSocketServer/`.
 - The extension README still mentions older HTTP/port-based examples in places, but the source code currently uses Unix sockets.

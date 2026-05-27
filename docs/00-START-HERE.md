@@ -28,6 +28,7 @@ python3 -m unittest discover -s tests -v
 
 cd vscode-extension
 npm run build
+npm run test:unit
 npm run test:socket
 ```
 

@@ -10,7 +10,8 @@ Last updated: 2026-05-27
 - In devcontainers, Python venv creation uses the ambient Python and skips wheel `Requires-Python`/`.python-version` interpreter acquisition. Outside devcontainers, it still prefers wheel `Requires-Python` metadata, resolves the lowest matching exact CPython patch version from the prebuilt manifest, and only uses `.python-version` as a deprecated fallback.
 - Generated build venvs install `gcubed-build-switcher` and `rich` so scripts can continue importing the switcher after VS Code changes interpreter.
 - Python and extension IPC use null-terminated UTF-8 JSON over a Unix domain socket. The socket server now accepts an injected request handler, so socket protocol tests can run in plain Jest without importing the VS Code host module.
-- A Python Environments API spike is documented in `docs/ai/python-environments-api-spike.md`; the intended rollout keeps the Python package on IPC and moves new/legacy VS Code API selection behind an extension-owned adapter.
+- The VS Code extension now has an environment-selection adapter seam in `vscode-extension/src/python/environmentSelector.js`. `interpreterHandler.js` uses the adapter rather than calling `@vscode/python-extension` helpers directly. The current adapter implementation preserves the legacy `ms-python.python` behavior; the new `ms-python.vscode-python-envs` implementation is the next spike slice.
+- A Python Environments API spike is documented in `docs/ai/python-environments-api-spike.md`; the intended rollout keeps the Python package on IPC and keeps new/legacy VS Code API selection behind the extension-owned adapter.
 - Root `AGENTS.md` is intentionally lean and serves as repo-local agent guardrails; durable project facts live in `docs/`.
 
 ## Recent Scan Notes
@@ -23,6 +24,7 @@ Last updated: 2026-05-27
 - `vscode-extension/README-extension-developer.md` still contains older HTTP/port examples and stale package command names.
 - `npm run test:http` references `tests/httpServer/jest.config.js`, but no matching test directory was found in the repo scan.
 - On 2026-05-27, the first Python Environments spike slice separated socket protocol handling from interpreter switching. Production passes the real `switchInterpreter`; tests inject a fake request handler.
+- On 2026-05-27, the second spike slice introduced the environment-selection adapter and bound extension activation to a single interpreter handler/selector pair. New plain Jest tests cover the legacy selector flow and handler delegation without Unix socket or VS Code host dependencies.
 
 ## Known Risks / Gaps
 
@@ -30,6 +32,7 @@ Last updated: 2026-05-27
 - Extension socket tests need an execution environment that permits Unix domain sockets. The default sandbox returns `EPERM` for AF_UNIX socket creation, so `npm run test:socket` must be run unsandboxed/escalated here.
 - Live end-to-end validation still requires a configured devcontainer or VS Code host with the Microsoft Python extension available.
 - Python Environments rollout needs live validation with `ms-python.vscode-python-envs`, `python.useEnvironmentsExtension: true`, `python-envs.workspaceSearchPaths: ["venv_gcubed_*"]`, and terminal auto-activation set to `off`.
+- The adapter still needs a `ms-python.vscode-python-envs` implementation and live validation in a real VS Code/devcontainer host.
 - Release behavior should be clarified: the release shim currently installs from GitHub `main`, not a pinned release tag or commit.
 - `SERVER_SOCKET_MODE = 0o666` should be confirmed as acceptable for the target devcontainer security model.
 - Prebuilt Python support depends on manifest reachability, platform coverage, archive checksum integrity, and local cache state.
@@ -69,6 +72,20 @@ Result:
   - `npm run test:socket`: passed, 5 suites / 11 tests. Required an escalated/unsandboxed run because the default sandbox blocks Unix domain sockets under `/tmp`.
   - `npm run build`: passed.
   - Python unit discovery: passed, 22 tests.
+
+Additional validation on 2026-05-27 after the adapter slice:
+
+```bash
+cd vscode-extension
+npm run test:unit
+npm run build
+npm run test:socket
+```
+
+Result:
+  - `npm run test:unit`: passed, 2 suites / 8 tests.
+  - `npm run build`: passed.
+  - `npm run test:socket`: passed, 5 suites / 11 tests. Required an escalated/unsandboxed run because the default sandbox blocks Unix domain sockets under `/tmp`.
 
 ## Open Questions
 
