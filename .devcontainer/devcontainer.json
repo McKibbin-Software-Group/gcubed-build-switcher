@@ -11,6 +11,11 @@
   // Keep customer-like settings in the same place as the baseline template,
   // then derive workspace-relative values from the devcontainer context.
   "runArgs": ["--env-file=.devcontainer/customer-configuration.env"],
+  // Developer-only continuity mounts. Do not copy these to customer templates.
+  "mounts": [
+    "source=${localEnv:HOME}/.codex,target=/home/vscode/.codex,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.agents,target=/home/vscode/.agents,type=bind,consistency=cached"
+  ],
   "containerEnv": {
     "WORKSPACE_MOUNT": "${containerWorkspaceFolder}"
   },
