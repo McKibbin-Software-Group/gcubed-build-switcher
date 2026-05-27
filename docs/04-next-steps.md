@@ -4,12 +4,12 @@ Last updated: 2026-05-27
 
 ## Immediate Pickup
 
-1. Add the `ms-python.vscode-python-envs` implementation behind the environment-selection adapter, keeping the current `ms-python.python` implementation as fallback.
+1. Live-validate the `ms-python.vscode-python-envs` selector path in a real VS Code/devcontainer host with both Microsoft extensions installed and `python.useEnvironmentsExtension: true`.
 2. Update stale extension-facing docs and metadata from HTTP/port wording to Unix socket wording.
 3. Decide how versions should line up across root `pyproject.toml`, `vscode-extension/package.json`, `release-files/pyproject.toml`, and `src/gcubed_build_switcher/__init__.py`.
 4. Confirm release shim behavior: floating `main` dependency versus pinned release ref.
 5. Ensure the customer devcontainer template sets a devcontainer marker such as `GCUBED_DEVCONTAINER=1`, or confirm the target host reliably exposes `DEVCONTAINER`, `REMOTE_CONTAINERS`, or `CODESPACES`.
-6. Continue the Python Environments API spike: validate exact exported API calls, select the requested `venv_gcubed_*` interpreter through `ms-python.vscode-python-envs`, and fall back to the existing `ms-python.python` selector until live devcontainer validation passes. Keep the repo/package layout stable and limit structural refactors to `vscode-extension/src`.
+6. Continue the Python Environments API spike: add settings diagnostics for the rollout settings, then decide whether to add an explicit `extensionDependencies` entry after live validation. Keep the repo/package layout stable and limit structural refactors to `vscode-extension/src`.
 7. When rolling out Python Environments support, update the customer devcontainer `.vscode/settings.json` with the settings below.
 
 ## Python Environments Rollout Settings

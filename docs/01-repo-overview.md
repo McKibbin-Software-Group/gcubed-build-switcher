@@ -16,7 +16,7 @@ This repo ships the G-Cubed build switcher used by customer devcontainers. It le
 - VS Code extension: `vscode-extension/`
   - Starts a Unix domain socket server on startup.
   - Parses one null-terminated JSON request per connection.
-  - Routes interpreter switching through an extension-owned environment selector adapter. The current selector preserves the legacy `ms-python.python` API path; the Python Environments implementation is planned behind the same adapter.
+  - Routes interpreter switching through an extension-owned environment selector adapter. The selector prefers `ms-python.vscode-python-envs` when available and verified, then falls back to the legacy `ms-python.python` API.
 - Release payload: `release-files/`
   - Contains artifacts consumed by the G-Cubed devcontainer template from the GitHub `latest` release.
 
@@ -37,7 +37,7 @@ This repo ships the G-Cubed build switcher used by customer devcontainers. It le
 - `src/gcubed_build_switcher/`: Python runtime package and CLI.
 - `tests/`: Python unit tests, currently centered on Python provider, wheel metadata, and venv behavior.
 - `vscode-extension/src/`: VS Code extension source.
-- `vscode-extension/src/python/environmentSelector.js`: adapter seam for legacy and future Python Environments API selection.
+- `vscode-extension/src/python/environmentSelector.js`: adapter seam for Python Environments API selection with legacy fallback.
 - `vscode-extension/tests/handlers/` and `vscode-extension/tests/python/`: plain Jest unit tests for interpreter handler and selector behavior.
 - `vscode-extension/tests/unixSocketServer/`: Jest socket/protocol tests.
 - `vscode-extension/tests/live/`: live socket probe for an installed/running extension.

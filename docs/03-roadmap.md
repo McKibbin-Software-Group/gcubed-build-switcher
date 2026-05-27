@@ -2,8 +2,8 @@
 
 ## Near Term
 
-- Add the `ms-python.vscode-python-envs` implementation behind the environment-selection adapter described in `docs/ai/python-environments-api-spike.md`.
-- Complete the Python Environments API spike so the extension prefers `ms-python.vscode-python-envs` with a legacy `ms-python.python` fallback.
+- Live-validate the `ms-python.vscode-python-envs` selector path in a real customer-like VS Code/devcontainer host.
+- Add extension-owned settings diagnostics for the Python Environments rollout settings.
 - Align stale extension docs and package metadata with the Unix socket implementation.
 - Decide and document the authoritative versioning/release model for the Python package, extension package, release shim, and `__version__`.
 - Clarify whether `release-files/pyproject.toml` should install from `main` or a pinned release ref.
@@ -30,6 +30,6 @@
 
 ## Sequencing Notes
 
-1. Keep socket and selector validation trustworthy while adding the Python Environments implementation behind the adapter.
+1. Keep socket and selector validation trustworthy while live-validating the Python Environments implementation.
 2. Clean up stale docs/scripts after the current behavior is captured.
 3. Resolve release/version ownership before the next real release.

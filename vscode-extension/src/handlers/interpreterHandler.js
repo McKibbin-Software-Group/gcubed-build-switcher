@@ -162,7 +162,7 @@ async function switchInterpreter(pythonPath, shortName, environmentSelector = cr
     }
   } catch (error) {
     console.error("Error using Python API:", error)
-    const errorMessage = `Failed to get Python interpreter. Check that the MS Python extension is loaded, enabled, and activated. Error from API: ${
+    const errorMessage = `Failed to set Python interpreter. Check that Microsoft Python environment extensions are loaded, enabled, and activated. Error from API: ${
       error.message || String(error)
     }`
 

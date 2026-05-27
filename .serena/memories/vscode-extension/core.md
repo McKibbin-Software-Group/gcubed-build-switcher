@@ -8,7 +8,8 @@ Update when: extension IPC, interpreter-selection ownership, Microsoft Python AP
 - Source path: `vscode-extension/src/`.
 - Unix socket server lives under `vscode-extension/src/unixSocketServer/`; it accepts null-terminated UTF-8 JSON and dispatches valid `set-interpreter` requests to an injected request handler.
 - Interpreter request orchestration lives in `vscode-extension/src/handlers/interpreterHandler.js`; activation creates one interpreter handler and passes its `switchInterpreter` function to the socket server.
-- Environment selection lives behind `vscode-extension/src/python/environmentSelector.js`. Current implementation wraps the legacy `ms-python.python` API; next planned slice adds `ms-python.vscode-python-envs` preference with legacy fallback.
+- Environment selection lives behind `vscode-extension/src/python/environmentSelector.js`. It now prefers optional `ms-python.vscode-python-envs`, verifies selection with `getEnvironment(scope)`, and falls back to legacy `ms-python.python` when the new extension is missing, disabled, incompatible, or cannot prove the requested interpreter was selected.
+- Python Environments scope currently uses the first workspace folder, matching existing relative path resolution; multi-root and customer devcontainer behavior still need live validation.
 - Python client/server IPC constants must stay aligned with `mem:python/core`.
 - Plain Jest unit tests: `vscode-extension/tests/handlers/` and `vscode-extension/tests/python/`; run `npm run test:unit`.
 - Socket/protocol tests: `vscode-extension/tests/unixSocketServer/`; run `npm run test:socket`. In this environment, the default sandbox blocks AF_UNIX sockets with `EPERM`, so this suite needs an unsandboxed/escalated shell.

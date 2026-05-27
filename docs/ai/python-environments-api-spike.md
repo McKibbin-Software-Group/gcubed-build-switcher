@@ -74,12 +74,15 @@ venvs. Those environments are selected dynamically by build tag. Use
    - IPC request and response shape stayed stable.
 
 2. Add a Python Environments implementation.
-   - Activate `ms-python.vscode-python-envs`.
-   - Read its exported API.
-   - Resolve `pythonPath` with `resolveEnvironment(vscode.Uri.file(path))`.
-   - Select with `setEnvironment(scope, environment)`.
-   - Verify with `getEnvironment(scope)` and compare the selected
-     environment's executable/environment path to the requested interpreter.
+   - Done 2026-05-27: the selector optionally activates
+     `ms-python.vscode-python-envs` and reads its exported API.
+   - Confirmed against upstream `src/api.ts`: use
+     `resolveEnvironment(vscode.Uri.file(path))`, select with
+     `setEnvironment(scope, environment)`, verify with
+     `getEnvironment(scope)`, and compare `execInfo.run.executable` to the
+     requested interpreter path.
+   - Missing/disabled/incompatible Python Environments API falls back to the
+     legacy selector.
 
 3. Preserve the legacy implementation.
    - Done 2026-05-27: current `@vscode/python-extension` calls moved behind
@@ -102,8 +105,9 @@ venvs. Those environments are selected dynamically by build tag. Use
 5. Install/dependency decisions.
    - Decide whether the customer devcontainer installs
      `ms-python.vscode-python-envs` explicitly.
-   - If the extension directly activates `ms-python.vscode-python-envs`, add an
-     `extensionDependencies` entry or handle missing extension errors clearly.
+   - Current slice handles missing extension errors clearly and keeps the
+     dependency optional. Reconsider an `extensionDependencies` entry only after
+     devcontainer VS Code/Python extension baselines are known.
    - Keep `ms-python.python` available while the fallback path exists.
 
 6. Fix the socket test harness first.
@@ -118,9 +122,10 @@ venvs. Those environments are selected dynamically by build tag. Use
    - Done 2026-05-27: legacy selector flow and interpreter-handler delegation
      have plain Jest unit coverage under `vscode-extension/tests/python/` and
      `vscode-extension/tests/handlers/`.
-   - Unit-test adapter selection order once the new implementation exists: new
-     API success, new API unavailable, new API resolve failure, legacy fallback
-     success, all paths fail.
+   - Done 2026-05-27: Python Environments happy path, resolution failure,
+     selected-environment mismatch, extension-missing fallback, and mixed
+     environment-shape extraction have focused unit coverage.
+   - Still useful: unit-test settings diagnostics without writing files.
    - Unit-test settings diagnostics without writing files.
    - Keep socket protocol tests focused on null-terminated JSON framing,
      validation, response handling, timeout, and concurrency.
@@ -182,14 +187,18 @@ tests boring and lets API-specific tests mock the two Microsoft extensions.
   instead of directly orchestrating legacy Python extension API calls.
 - The startup fallback no longer assumes only `venv.internal.path`; fallback
   path extraction is normalized behind the adapter.
+- The selector now prefers `ms-python.vscode-python-envs` and falls back to
+  `ms-python.python`. It verifies the new API path by reading
+  `getEnvironment(scope)` after `setEnvironment(scope, env)`.
 
 ### Medium
 
 - `setValidStartingInterpreter()` blocks extension activation for about 15
   seconds before validating Python state. That delays readiness of the switcher
   socket path and can make startup behavior feel brittle in remote containers.
-- Startup validation still depends on legacy API behavior until the
-  `ms-python.vscode-python-envs` selector implementation is added.
+- The selector currently derives Python Environments scope from the first
+  workspace folder, matching existing relative path behavior. Multi-root and
+  `GCUBED_ROOT` outside the first workspace need live validation.
 - The extension package still says it switches venvs via local HTTP requests,
   but the implementation uses Unix sockets.
 
