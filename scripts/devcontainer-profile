@@ -1,0 +1,394 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "${script_dir}/.." && pwd)"
+active_dir="${repo_root}/.devcontainer/matrix-active"
+active_config="${active_dir}/devcontainer.json"
+
+profile=""
+mode=""
+python_tag=""
+python_url=""
+python_file=""
+vsix_tag=""
+vsix_url=""
+vsix_file=""
+base_tag="latest"
+command="${1:-}"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  scripts/devcontainer-profile list
+  scripts/devcontainer-profile show <profile> [options]
+  scripts/devcontainer-profile env <profile> [options]
+  scripts/devcontainer-profile render <profile> [options]
+  scripts/devcontainer-profile prepare <profile> [options]
+  scripts/devcontainer-profile up <profile> [options]
+
+Profiles:
+  legacy-baseline
+  new-python-old-vsix
+  old-python-new-vsix-legacy
+  new-python-new-vsix-legacy
+  old-python-new-vsix-python-envs
+  new-python-new-vsix-python-envs
+
+Options:
+  --tag <tag>          Default release tag used by both halves when specific tags are unset.
+  --python-tag <tag>   Release tag for the Python artifact.
+  --python-url <url>   Explicit Python artifact URL. Use for candidate wheels.
+  --python-file <name> Destination filename for the Python artifact.
+  --vsix-tag <tag>     Release tag for the VSIX artifact.
+  --vsix-url <url>     Explicit VSIX artifact URL. Use for candidate VSIX builds.
+  --vsix-file <name>   Release asset filename for the VSIX artifact.
+
+Examples:
+  scripts/devcontainer-profile prepare legacy-baseline
+  scripts/devcontainer-profile prepare new-python-old-vsix --python-url https://example.invalid/gcubed_build_switcher-1.2.3-py3-none-any.whl
+  scripts/devcontainer-profile up new-python-new-vsix-python-envs --python-url https://example.invalid/gcubed_build_switcher-1.2.3-py3-none-any.whl --vsix-url https://example.invalid/gcubed-vscode-venv-switcher.vsix
+EOF
+}
+
+die() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+shell_quote() {
+  printf '%q' "$1"
+}
+
+filename_from_url() {
+  local url="$1"
+  local name="${url##*/}"
+  name="${name%%\?*}"
+  name="${name%%#*}"
+  printf '%s' "$name"
+}
+
+list_profiles() {
+  cat <<'EOF'
+legacy-baseline                  old Python artifact + old VSIX, legacy Python extension mode
+new-python-old-vsix              candidate Python wheel + old VSIX, legacy Python extension mode
+old-python-new-vsix-legacy       old Python artifact + candidate VSIX, legacy Python extension mode
+new-python-new-vsix-legacy       candidate Python wheel + candidate VSIX, legacy Python extension mode
+old-python-new-vsix-python-envs  old Python artifact + candidate VSIX, Python Environments mode
+new-python-new-vsix-python-envs  candidate Python wheel + candidate VSIX, Python Environments mode
+EOF
+}
+
+profile_requires_python_url() {
+  case "$1" in
+    new-python-old-vsix|new-python-new-vsix-legacy|new-python-new-vsix-python-envs)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+profile_requires_vsix_url() {
+  case "$1" in
+    old-python-new-vsix-legacy|new-python-new-vsix-legacy|old-python-new-vsix-python-envs|new-python-new-vsix-python-envs)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+profile_mode() {
+  case "$1" in
+    legacy-baseline|new-python-old-vsix|old-python-new-vsix-legacy|new-python-new-vsix-legacy)
+      printf 'legacy'
+      ;;
+    old-python-new-vsix-python-envs|new-python-new-vsix-python-envs)
+      printf 'python-envs'
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+parse_options() {
+  profile="${1:-}"
+  [ -n "${profile}" ] || die "missing profile"
+  mode="$(profile_mode "${profile}")" || die "unknown profile: ${profile}"
+  shift
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --tag)
+        [ "$#" -ge 2 ] || die "--tag requires a value"
+        base_tag="$2"
+        shift 2
+        ;;
+      --python-tag)
+        [ "$#" -ge 2 ] || die "--python-tag requires a value"
+        python_tag="$2"
+        shift 2
+        ;;
+      --python-url)
+        [ "$#" -ge 2 ] || die "--python-url requires a value"
+        python_url="$2"
+        shift 2
+        ;;
+      --python-file)
+        [ "$#" -ge 2 ] || die "--python-file requires a value"
+        python_file="$2"
+        shift 2
+        ;;
+      --vsix-tag)
+        [ "$#" -ge 2 ] || die "--vsix-tag requires a value"
+        vsix_tag="$2"
+        shift 2
+        ;;
+      --vsix-url)
+        [ "$#" -ge 2 ] || die "--vsix-url requires a value"
+        vsix_url="$2"
+        shift 2
+        ;;
+      --vsix-file)
+        [ "$#" -ge 2 ] || die "--vsix-file requires a value"
+        vsix_file="$2"
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        die "unknown option: $1"
+        ;;
+    esac
+  done
+
+  python_tag="${python_tag:-${base_tag}}"
+  vsix_tag="${vsix_tag:-${base_tag}}"
+
+  if [ -n "${python_url}" ] && [ -z "${python_file}" ]; then
+    python_file="$(filename_from_url "${python_url}")"
+  fi
+
+  python_file="${python_file:-pyproject.toml}"
+  vsix_file="${vsix_file:-gcubed-vscode-venv-switcher.vsix}"
+
+  if profile_requires_python_url "${profile}" && [ -z "${python_url}" ]; then
+    die "${profile} needs --python-url pointing at the candidate wheel"
+  fi
+
+  if profile_requires_vsix_url "${profile}" && [ -z "${vsix_url}" ]; then
+    die "${profile} needs --vsix-url pointing at the candidate VSIX"
+  fi
+}
+
+profile_label() {
+  case "${mode}" in
+    legacy)
+      printf 'G-Cubed Build Switcher Matrix - Active Legacy (%s)' "${profile}"
+      ;;
+    python-envs)
+      printf 'G-Cubed Build Switcher Matrix - Active Python Environments (%s)' "${profile}"
+      ;;
+  esac
+}
+
+show_profile() {
+  cat <<EOF
+Profile: ${profile}
+VS Code mode: ${mode}
+Python artifact:
+  tag: ${python_tag}
+  url: ${python_url:-<release asset>}
+  file: ${python_file}
+VSIX artifact:
+  tag: ${vsix_tag}
+  url: ${vsix_url:-<release asset>}
+  file: ${vsix_file}
+Generated config: ${active_config}
+EOF
+}
+
+emit_env() {
+  cat <<EOF
+export VENV_SWITCHER_TAG=$(shell_quote "${base_tag}")
+export VENV_SWITCHER_PYTHON_TAG=$(shell_quote "${python_tag}")
+export VENV_SWITCHER_PYTHON_URL=$(shell_quote "${python_url}")
+export VENV_SWITCHER_PYTHON_FILE=$(shell_quote "${python_file}")
+export VENV_SWITCHER_VSIX_TAG=$(shell_quote "${vsix_tag}")
+export VENV_SWITCHER_VSIX_URL=$(shell_quote "${vsix_url}")
+export VENV_SWITCHER_VSIX_FILE=$(shell_quote "${vsix_file}")
+EOF
+}
+
+render_config() {
+  local escaped_name
+  local escaped_base_tag
+  local escaped_python_tag
+  local escaped_python_url
+  local escaped_python_file
+  local escaped_vsix_tag
+  local escaped_vsix_url
+  local escaped_vsix_file
+
+  escaped_name="$(json_escape "$(profile_label)")"
+  escaped_base_tag="$(json_escape "${base_tag}")"
+  escaped_python_tag="$(json_escape "${python_tag}")"
+  escaped_python_url="$(json_escape "${python_url}")"
+  escaped_python_file="$(json_escape "${python_file}")"
+  escaped_vsix_tag="$(json_escape "${vsix_tag}")"
+  escaped_vsix_url="$(json_escape "${vsix_url}")"
+  escaped_vsix_file="$(json_escape "${vsix_file}")"
+
+  cat <<EOF
+{
+  "name": "${escaped_name}",
+  "build": {
+    "context": "../..",
+    "dockerfile": "../Dockerfile",
+    "args": {
+      "PYTHON_VARIANT": "3-3.13-bookworm",
+      "NODE_VERSION": "lts/*",
+      "SWITCHER_TEST_MATRIX": "1",
+      "VENV_SWITCHER_TAG": "${escaped_base_tag}",
+      "VENV_SWITCHER_PYTHON_TAG": "${escaped_python_tag}",
+      "VENV_SWITCHER_PYTHON_URL": "${escaped_python_url}",
+      "VENV_SWITCHER_PYTHON_FILE": "${escaped_python_file}",
+      "VENV_SWITCHER_VSIX_TAG": "${escaped_vsix_tag}",
+      "VENV_SWITCHER_VSIX_URL": "${escaped_vsix_url}",
+      "VENV_SWITCHER_VSIX_FILE": "${escaped_vsix_file}"
+    }
+  },
+  "runArgs": ["--env-file=\${localWorkspaceFolder}/.devcontainer/customer-configuration.env"],
+  "mounts": [
+    "source=\${localEnv:HOME}/.codex,target=/home/vscode/.codex,type=bind,consistency=cached",
+    "source=\${localEnv:HOME}/.agents,target=/home/vscode/.agents,type=bind,consistency=cached"
+  ],
+  "containerEnv": {
+    "WORKSPACE_MOUNT": "\${containerWorkspaceFolder}"
+  },
+  "remoteEnv": {
+    "GCUBED_ROOT": "\${containerEnv:WORKSPACE_MOUNT}\${containerEnv:USER_DATA_SUBDIRECTORY}"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "mechatroner.rainbow-csv",
+        "mhutchie.git-graph",
+        "ms-python.black-formatter",
+        "ms-python.python",
+EOF
+
+  if [ "${mode}" = "python-envs" ]; then
+    cat <<'EOF'
+        "ms-python.vscode-python-envs",
+EOF
+  fi
+
+  cat <<EOF
+        "ms-vsliveshare.vsliveshare",
+        "/home/vscode/extensions/gcubed-venv-switcher/gcubed-vscode-venv-switcher.vsix"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+EOF
+
+  if [ "${mode}" = "python-envs" ]; then
+    cat <<'EOF'
+        "python.useEnvironmentsExtension": true,
+        "python-envs.pythonProjects": [],
+        "python-envs.defaultEnvManager": "ms-python.python:venv",
+        "python-envs.workspaceSearchPaths": ["venv_gcubed_*"],
+        "python-envs.terminal.autoActivationType": "off",
+        "python-envs.alwaysUseUv": true,
+EOF
+  else
+    cat <<'EOF'
+        "python.useEnvironmentsExtension": false,
+        "python-envs.pythonProjects": [],
+        "python-envs.defaultEnvManager": "ms-python.python:venv",
+EOF
+  fi
+
+  cat <<'EOF'
+        "terminal.integrated.cwd": "${workspaceFolder}",
+        "telemetry.telemetryLevel": "off"
+      }
+    }
+  },
+  "onCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/gcubed-setup/gcubed-build-switcher-dev-setup.sh"
+}
+EOF
+}
+
+prepare_profile() {
+  mkdir -p "${active_dir}"
+  render_config > "${active_config}"
+  show_profile
+  printf '\nWrote active devcontainer config: %s\n' "${active_config}"
+}
+
+run_devcontainer_up() {
+  prepare_profile
+
+  if ! command -v devcontainer >/dev/null 2>&1; then
+    cat <<EOF
+
+The devcontainer CLI was not found on PATH.
+Open this repo in VS Code, run "Dev Containers: Reopen in Container", and choose:
+  $(profile_label)
+EOF
+    exit 1
+  fi
+
+  printf '\nStarting devcontainer with %s\n' "${active_config}"
+  devcontainer up --workspace-folder "${repo_root}" --config "${active_config}"
+}
+
+case "${command}" in
+  list)
+    list_profiles
+    ;;
+  show)
+    shift
+    parse_options "$@"
+    show_profile
+    ;;
+  env)
+    shift
+    parse_options "$@"
+    emit_env
+    ;;
+  render)
+    shift
+    parse_options "$@"
+    render_config
+    ;;
+  prepare)
+    shift
+    parse_options "$@"
+    prepare_profile
+    ;;
+  up)
+    shift
+    parse_options "$@"
+    run_devcontainer_up
+    ;;
+  -h|--help|"")
+    usage
+    ;;
+  *)
+    usage >&2
+    die "unknown command: ${command}"
+    ;;
+esac

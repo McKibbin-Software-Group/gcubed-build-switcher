@@ -10,6 +10,9 @@ scratch/
 # G-Cubed virtual environments
 venv_gcubed*
 
+# Generated devcontainer profile config
+.devcontainer/matrix-active/
+
 # Package build/install files
 build/
 *.egg-info/

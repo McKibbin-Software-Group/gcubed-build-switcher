@@ -17,6 +17,10 @@
     }
   },
   "runArgs": ["--env-file=${localWorkspaceFolder}/.devcontainer/customer-configuration.env"],
+  "mounts": [
+    "source=${localEnv:HOME}/.codex,target=/home/vscode/.codex,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.agents,target=/home/vscode/.agents,type=bind,consistency=cached"
+  ],
   "containerEnv": {
     "WORKSPACE_MOUNT": "${containerWorkspaceFolder}"
   },
