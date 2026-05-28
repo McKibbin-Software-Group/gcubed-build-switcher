@@ -132,6 +132,9 @@ scripts/build-secure-bundle
 scripts/verify-secure-bundle build/secure-bundle/gcubed-build-switcher-secure.tar.gz
 ```
 
+For the baby-step local HTTP server flow, see
+`docs/05-secure-bundle-local-smoke.md`.
+
 Test a secure bundle from an explicit URL using the Python Environments path:
 
 ```bash
