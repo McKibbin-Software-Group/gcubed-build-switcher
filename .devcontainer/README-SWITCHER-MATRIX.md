@@ -169,8 +169,27 @@ easy to leak.
 
 GitHub Actions artifacts are useful for inspection, but they are awkward as
 matrix inputs because downloading them usually requires GitHub API
-authentication. For full matrix validation, prefer publishing candidate wheel
-and VSIX assets to a draft, prerelease, or internal test release.
+authentication. For full smoke validation, prefer publishing the secure bundle
+to a draft, prerelease, internal test release, or the moving secure channel tag
+once approved.
+
+## Secure Bundle Manifest
+
+The new bundle path should not rely on the moving tag for auditability. The
+secure tarball should include a manifest, probably `manifest.json`, with at
+least:
+
+- bundle schema version
+- switcher package version
+- Git commit SHA
+- build date/time
+- wheel filename and SHA-256 hash
+- VSIX filename and SHA-256 hash
+- installer or validation filenames and SHA-256 hashes
+
+The installer should validate the manifest before installing the wheel or VSIX.
+In this model, `latest-secure` is the update channel and the manifest is the
+audit and integrity record.
 
 ## What To Check After Rebuild
 

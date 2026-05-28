@@ -65,7 +65,10 @@ Last updated: 2026-05-28
 - Release behavior is changing deliberately: legacy deployments continue using
   the current release-files shape, while the new bundle path will use one
   intentionally moving secure channel tag such as `latest-secure` until field
-  upgrade mechanics are easier.
+  upgrade mechanics are easier. The secure tarball must be self-describing: its
+  manifest records version, Git commit SHA, build date/time, wheel and VSIX
+  filenames, and SHA-256 hashes. Installer validation of that manifest is still
+  to be implemented.
 - A Dependency Review workflow is not present yet.
 - GitHub settings still need final verification after the branch lands:
   Dependency Graph, Dependabot alerts, Dependabot security updates, automatic
@@ -159,8 +162,8 @@ Result:
 - Which version source should be authoritative for releases?
 - What exact moving secure channel tag name should be used for the new bundle
   path? Working assumption: `latest-secure`.
-- What exact release asset names should be treated as stable by customer
-  devcontainer templates?
+- What exact release asset names and manifest filename should be treated as
+  stable by customer devcontainer templates?
 - What repeatable live VS Code/devcontainer smoke path should be documented for
   validating both the legacy and Python Environments API interpreter switchers?
 - What date or customer-baseline signal allows removing the legacy

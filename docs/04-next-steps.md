@@ -19,17 +19,28 @@ Last updated: 2026-05-28
 5. Decide the secure bundle asset layout:
    - Python wheel.
    - VSIX.
-   - Validation or manifest metadata.
+   - `manifest.json` or equivalent self-describing metadata.
+   - Any installer or validation files.
    - Any legacy release files still needed during migration.
-6. Add a release workflow or script that builds the wheel and VSIX from the same
-   source version, packages the secure tarball, and uploads it to the moving
-   secure channel tag.
-7. Produce a candidate secure bundle at a curl-reachable URL.
-8. Run the production-vs-development devcontainer smoke profiles from
-   `.devcontainer/README-SWITCHER-MATRIX.md`.
-9. Merge only after CI, CodeQL, dependency review, and smoke validation are
-   green.
-10. Update the customer devcontainer template to consume the moving secure
+6. Define the secure bundle manifest schema:
+   - bundle schema version
+   - switcher package version
+   - Git commit SHA
+   - build date/time
+   - wheel filename and SHA-256 hash
+   - VSIX filename and SHA-256 hash
+   - installer/validation filenames and SHA-256 hashes
+7. Add a release workflow or script that builds the wheel and VSIX from the same
+   source version, writes and verifies the manifest, packages the secure
+   tarball, and uploads it to the moving secure channel tag.
+8. Add installer validation that checks the manifest before installing the wheel
+   or VSIX.
+9. Produce a candidate secure bundle at a curl-reachable URL.
+10. Run the production-vs-development devcontainer smoke profiles from
+    `.devcontainer/README-SWITCHER-MATRIX.md`.
+11. Merge only after CI, CodeQL, dependency review, and smoke validation are
+    green.
+12. Update the customer devcontainer template to consume the moving secure
     channel tag when ready.
 
 ## How To Handle Dependabot PRs

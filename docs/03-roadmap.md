@@ -49,6 +49,13 @@ Status: next major design/implementation slice.
 - Use a single intentionally moving secure channel tag, currently expected to be
   something like `latest-secure`, for the new bundled release shape. This keeps
   field deployments upgradeable without per-template tag edits.
+- Make the secure tarball self-describing with a manifest that records the
+  bundle schema version, package version, Git commit SHA, build date/time, wheel
+  filename/hash, VSIX filename/hash, and any installer or validation file
+  hashes.
+- Require the installer to validate the manifest before installing from the
+  bundle. The moving tag is the update channel; the manifest is the audit and
+  integrity record.
 - Treat immutable per-version release tags as a later hardening step, not a
   blocker for the initial secure-bundle migration.
 
