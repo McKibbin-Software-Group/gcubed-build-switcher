@@ -1,45 +1,86 @@
 # Next Steps
 
-Last updated: 2026-05-27
+Last updated: 2026-05-28
 
 ## Immediate Pickup
 
-1. Decide how versions should line up across root `pyproject.toml`, `vscode-extension/package.json`, `release-files/pyproject.toml`, and `src/gcubed_build_switcher/__init__.py`.
-2. Confirm release shim behavior: floating `main` dependency versus pinned release ref.
-3. Ensure the customer devcontainer template sets a devcontainer marker such as `GCUBED_DEVCONTAINER=1`, or confirm the target host reliably exposes `DEVCONTAINER`, `REMOTE_CONTAINERS`, or `CODESPACES`.
-4. Decide whether to add an explicit `extensionDependencies` entry for `ms-python.vscode-python-envs` after customer/devcontainer baselines are known. Keep the legacy `ms-python.python` fallback for now.
-5. Document a repeatable live VS Code/devcontainer smoke path that records the returned `apiId` for both the Python Environments selector and the legacy fallback.
-6. When rolling out Python Environments support to customer templates, carry the settings below.
+1. Add a GitHub Dependency Review workflow for pull requests.
+2. Confirm GitHub repository settings:
+   - Dependency Graph enabled.
+   - Dependabot alerts enabled.
+   - Dependabot security updates and automatic fix PRs enabled.
+   - Secret scanning enabled where available.
+   - Push protection enabled where available.
+   - Branch protection on `main` requires CI and CodeQL before merge.
+3. Finish the single-source version work that is currently in progress in
+   `src/gcubed_build_switcher/version.py` and `tests/test_runtime_version.py`.
+4. Confirm the moving secure channel tag name, probably `latest-secure`, and
+   document that it intentionally moves to the current approved secure bundle.
+5. Decide the secure bundle asset layout:
+   - Python wheel.
+   - VSIX.
+   - Validation or manifest metadata.
+   - Any legacy release files still needed during migration.
+6. Add a release workflow or script that builds the wheel and VSIX from the same
+   source version, packages the secure tarball, and uploads it to the moving
+   secure channel tag.
+7. Produce a candidate secure bundle at a curl-reachable URL.
+8. Run the production-vs-development devcontainer smoke profiles from
+   `.devcontainer/README-SWITCHER-MATRIX.md`.
+9. Merge only after CI, CodeQL, dependency review, and smoke validation are
+   green.
+10. Update the customer devcontainer template to consume the moving secure
+    channel tag when ready.
 
-## Python Environments Rollout Settings
+## How To Handle Dependabot PRs
 
-Use these settings when the switcher supports `ms-python.vscode-python-envs`
-and the customer devcontainer is ready to stop disabling the new extension:
+Treat Dependabot PRs as ordinary change PRs with a security-flavoured reason to
+exist.
 
-```json
-{
-  "python.useEnvironmentsExtension": true,
-  "python-envs.defaultEnvManager": "ms-python.python:venv",
-  "python-envs.workspaceSearchPaths": ["venv_gcubed_*"],
-  "python-envs.terminal.autoActivationType": "off",
-  "python-envs.alwaysUseUv": true
-}
+1. Read the Dependabot PR summary and linked advisory/changelog.
+2. Wait for CI, CodeQL, and dependency review checks.
+3. For npm changes, make sure extension unit tests, build, socket tests, and
+   package smoke pass.
+4. For Python changes, make sure Python unit tests pass.
+5. For release or runtime dependency changes, run the relevant devcontainer
+   matrix profile before merging.
+6. Merge only after the branch has the same confidence as a human-authored PR.
+
+Do not merge dependency updates directly to `main` before this branch's CI and
+release safety rails are in place.
+
+## Devcontainer Matrix Commands
+
+List profiles:
+
+```bash
+scripts/devcontainer-profile list
 ```
 
-Do not use `python-envs.pythonProjects` to model individual
-`venv_gcubed_*` build environments. The G-Cubed switcher creates and selects
-build-specific venvs dynamically, so the extension should programmatically
-resolve and set the requested interpreter. `python-envs.pythonProjects` is only
-useful if a customer workspace needs explicit stable Python project mappings.
+Generate a current-live baseline profile:
 
-`python-envs.workspaceSearchPaths` is still useful as a fallback so generated
-`venv_gcubed_*` environments appear in the Python Environments UI and manual
-selection flows. Auto-discovery is not the primary switching mechanism.
+```bash
+scripts/devcontainer-profile prepare legacy-baseline
+```
 
-Keep terminal auto-activation set to `off` for the first rollout. The switcher
-changes the selected interpreter explicitly; terminal startup mutation should
-not be introduced until it has a clear user benefit and has been tested in the
-customer devcontainer shell.
+Generate a new-Python/old-VSIX compatibility profile:
+
+```bash
+scripts/devcontainer-profile prepare new-python-old-vsix \
+  --python-url "https://github.com/McKibbin-Software-Group/gcubed-build-switcher/releases/latest/download/gcubed_build_switcher-1.2.3-py3-none-any.whl"
+```
+
+Generate a full new-Python/new-VSIX profile using the Python Environments path:
+
+```bash
+scripts/devcontainer-profile prepare new-python-new-vsix-python-envs \
+  --python-url "https://github.com/McKibbin-Software-Group/gcubed-build-switcher/releases/latest/download/gcubed_build_switcher-1.2.3-py3-none-any.whl" \
+  --vsix-url "https://github.com/McKibbin-Software-Group/gcubed-build-switcher/releases/latest/download/gcubed-vscode-venv-switcher.vsix"
+```
+
+After `prepare`, rebuild/reopen in VS Code and select the generated active
+profile. Use `scripts/devcontainer-profile up <profile>` only when the
+standalone `devcontainer` CLI is installed and working.
 
 ## Validation To Run
 
@@ -53,28 +94,54 @@ npm run test:socket
 npm run package:test
 ```
 
-For a release or runtime change, also run a configured smoke test:
+For a release or runtime change, also run configured smoke tests:
 
 ```bash
-python -m src.gcubed_build_switcher.cli <build_tag>
+gcubed-switch <build_tag>
 node vscode-extension/tests/live/runSocketTests.js
 ```
 
+For a candidate release, run these matrix profiles at minimum:
+
+```bash
+scripts/devcontainer-profile prepare new-python-old-vsix --python-url "<wheel-url>"
+scripts/devcontainer-profile prepare old-python-new-vsix-legacy --vsix-url "<vsix-url>"
+scripts/devcontainer-profile prepare new-python-new-vsix-legacy --python-url "<wheel-url>" --vsix-url "<vsix-url>"
+scripts/devcontainer-profile prepare new-python-new-vsix-python-envs --python-url "<wheel-url>" --vsix-url "<vsix-url>"
+```
+
+Rebuild the devcontainer after each `prepare` and run a real switcher smoke test
+when a build tag is available.
+
 ## Context Needed Before Starting
 
-- Target customer devcontainer assumptions: user IDs, socket permissions, available Python extension, and network access.
+- Target customer devcontainer assumptions: user IDs, socket permissions,
+  available Python extension, and network access.
 - Devcontainer runtime marker guaranteed by the customer template or host.
-- Whether the customer devcontainer should install `ms-python.vscode-python-envs` explicitly or rely on the Python extension's rollout path.
-- Expected versioning policy for Python package, VS Code extension, release shim, and generated artifacts.
-- Whether release assets should float to `main` or pin to immutable refs.
+- Whether the customer devcontainer should install `ms-python.vscode-python-envs`
+  explicitly or rely on the Python extension's rollout path.
+- Expected versioning policy for Python package, VS Code extension, release shim,
+  and generated artifacts.
+- Exact release asset names for wheel, VSIX, legacy release file, and any
+  compatibility manifest/tarball.
 - A real prerequisites repo tag for CLI/end-to-end smoke testing.
 
-## Blockers
+## Blockers / Gaps
 
-- No docs blocker remains after the baseline setup.
-- Extension socket tests require an execution environment that permits Unix domain sockets; the default sandbox returns `EPERM` for AF_UNIX socket creation, so run them unsandboxed/escalated.
-- Further customer-like end-to-end validation still needs a configured target devcontainer and real build tag.
+- Dependency Review workflow is not present yet.
+- GitHub settings still need final verification after the repo files land on
+  `main`.
+- Candidate wheel/VSIX assets need curl-reachable URLs before the devcontainer
+  matrix can fully prove the migration.
+- Extension socket tests require an execution environment that permits Unix
+  domain sockets; the default sandbox returns `EPERM` for AF_UNIX socket
+  creation, so run them unsandboxed/escalated here.
+- Further customer-like end-to-end validation still needs a configured target
+  devcontainer and real build tag.
 
 ## Good Stopping Point
 
-The next useful stopping point is a repo where Python tests pass, extension build passes, socket tests run cleanly in plain Jest, and release/version ownership is documented before packaging.
+The next useful stopping point is a branch where CI, CodeQL, dependency review,
+version generation, wheel/VSIX packaging, and the devcontainer compatibility
+matrix are all repeatable enough that Dependabot PRs can be tested before being
+merged.
