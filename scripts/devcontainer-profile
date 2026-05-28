@@ -14,8 +14,12 @@ python_file=""
 vsix_tag=""
 vsix_url=""
 vsix_file=""
+bundle_tag=""
+bundle_url=""
+bundle_file=""
 base_tag="latest"
 command="${1:-}"
+default_bundle_file="gcubed-build-switcher-secure.tar.gz"
 
 usage() {
   cat <<'EOF'
@@ -34,6 +38,8 @@ Profiles:
   new-python-new-vsix-legacy
   old-python-new-vsix-python-envs
   new-python-new-vsix-python-envs
+  secure-bundle-legacy
+  secure-bundle-python-envs
 
 Options:
   --tag <tag>          Default release tag used by both halves when specific tags are unset.
@@ -43,11 +49,15 @@ Options:
   --vsix-tag <tag>     Release tag for the VSIX artifact.
   --vsix-url <url>     Explicit VSIX artifact URL. Use for candidate VSIX builds.
   --vsix-file <name>   Release asset filename for the VSIX artifact.
+  --bundle-tag <tag>   Release tag for the secure bundle. Defaults to latest-secure for bundle profiles.
+  --bundle-url <url>   Explicit secure bundle URL.
+  --bundle-file <name> Release asset filename for the secure bundle.
 
 Examples:
   scripts/devcontainer-profile prepare legacy-baseline
   scripts/devcontainer-profile prepare new-python-old-vsix --python-url https://example.invalid/gcubed_build_switcher-1.2.3-py3-none-any.whl
   scripts/devcontainer-profile up new-python-new-vsix-python-envs --python-url https://example.invalid/gcubed_build_switcher-1.2.3-py3-none-any.whl --vsix-url https://example.invalid/gcubed-vscode-venv-switcher.vsix
+  scripts/devcontainer-profile prepare secure-bundle-python-envs --bundle-url https://example.invalid/gcubed-build-switcher-secure.tar.gz
 EOF
 }
 
@@ -80,6 +90,8 @@ old-python-new-vsix-legacy       old Python artifact + candidate VSIX, legacy Py
 new-python-new-vsix-legacy       candidate Python wheel + candidate VSIX, legacy Python extension mode
 old-python-new-vsix-python-envs  old Python artifact + candidate VSIX, Python Environments mode
 new-python-new-vsix-python-envs  candidate Python wheel + candidate VSIX, Python Environments mode
+secure-bundle-legacy             secure bundle, legacy Python extension mode
+secure-bundle-python-envs        secure bundle, Python Environments mode
 EOF
 }
 
@@ -105,12 +117,23 @@ profile_requires_vsix_url() {
   esac
 }
 
+profile_uses_bundle() {
+  case "$1" in
+    secure-bundle-legacy|secure-bundle-python-envs)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 profile_mode() {
   case "$1" in
-    legacy-baseline|new-python-old-vsix|old-python-new-vsix-legacy|new-python-new-vsix-legacy)
+    legacy-baseline|new-python-old-vsix|old-python-new-vsix-legacy|new-python-new-vsix-legacy|secure-bundle-legacy)
       printf 'legacy'
       ;;
-    old-python-new-vsix-python-envs|new-python-new-vsix-python-envs)
+    old-python-new-vsix-python-envs|new-python-new-vsix-python-envs|secure-bundle-python-envs)
       printf 'python-envs'
       ;;
     *)
@@ -162,6 +185,21 @@ parse_options() {
         vsix_file="$2"
         shift 2
         ;;
+      --bundle-tag)
+        [ "$#" -ge 2 ] || die "--bundle-tag requires a value"
+        bundle_tag="$2"
+        shift 2
+        ;;
+      --bundle-url)
+        [ "$#" -ge 2 ] || die "--bundle-url requires a value"
+        bundle_url="$2"
+        shift 2
+        ;;
+      --bundle-file)
+        [ "$#" -ge 2 ] || die "--bundle-file requires a value"
+        bundle_file="$2"
+        shift 2
+        ;;
       -h|--help)
         usage
         exit 0
@@ -174,6 +212,17 @@ parse_options() {
 
   python_tag="${python_tag:-${base_tag}}"
   vsix_tag="${vsix_tag:-${base_tag}}"
+
+  if profile_uses_bundle "${profile}"; then
+    bundle_tag="${bundle_tag:-latest-secure}"
+    if [ -n "${bundle_url}" ] && [ -z "${bundle_file}" ]; then
+      bundle_file="$(filename_from_url "${bundle_url}")"
+    fi
+    bundle_file="${bundle_file:-${default_bundle_file}}"
+    python_file=""
+    vsix_file=""
+    return
+  fi
 
   if [ -n "${python_url}" ] && [ -z "${python_file}" ]; then
     python_file="$(filename_from_url "${python_url}")"
@@ -194,15 +243,36 @@ parse_options() {
 profile_label() {
   case "${mode}" in
     legacy)
-      printf 'G-Cubed Build Switcher Matrix - Active Legacy (%s)' "${profile}"
+      if profile_uses_bundle "${profile}"; then
+        printf 'G-Cubed Build Switcher Matrix - Active Secure Bundle Legacy (%s)' "${profile}"
+      else
+        printf 'G-Cubed Build Switcher Matrix - Active Legacy (%s)' "${profile}"
+      fi
       ;;
     python-envs)
-      printf 'G-Cubed Build Switcher Matrix - Active Python Environments (%s)' "${profile}"
+      if profile_uses_bundle "${profile}"; then
+        printf 'G-Cubed Build Switcher Matrix - Active Secure Bundle Python Environments (%s)' "${profile}"
+      else
+        printf 'G-Cubed Build Switcher Matrix - Active Python Environments (%s)' "${profile}"
+      fi
       ;;
   esac
 }
 
 show_profile() {
+  if profile_uses_bundle "${profile}"; then
+    cat <<EOF
+Profile: ${profile}
+VS Code mode: ${mode}
+Secure bundle:
+  tag: ${bundle_tag}
+  url: ${bundle_url:-<release asset>}
+  file: ${bundle_file}
+Generated config: ${active_config}
+EOF
+    return
+  fi
+
   cat <<EOF
 Profile: ${profile}
 VS Code mode: ${mode}
@@ -227,6 +297,9 @@ export VENV_SWITCHER_PYTHON_FILE=$(shell_quote "${python_file}")
 export VENV_SWITCHER_VSIX_TAG=$(shell_quote "${vsix_tag}")
 export VENV_SWITCHER_VSIX_URL=$(shell_quote "${vsix_url}")
 export VENV_SWITCHER_VSIX_FILE=$(shell_quote "${vsix_file}")
+export VENV_SWITCHER_BUNDLE_TAG=$(shell_quote "${bundle_tag}")
+export VENV_SWITCHER_BUNDLE_URL=$(shell_quote "${bundle_url}")
+export VENV_SWITCHER_BUNDLE_FILE=$(shell_quote "${bundle_file}")
 EOF
 }
 
@@ -239,6 +312,9 @@ render_config() {
   local escaped_vsix_tag
   local escaped_vsix_url
   local escaped_vsix_file
+  local escaped_bundle_tag
+  local escaped_bundle_url
+  local escaped_bundle_file
 
   escaped_name="$(json_escape "$(profile_label)")"
   escaped_base_tag="$(json_escape "${base_tag}")"
@@ -248,6 +324,9 @@ render_config() {
   escaped_vsix_tag="$(json_escape "${vsix_tag}")"
   escaped_vsix_url="$(json_escape "${vsix_url}")"
   escaped_vsix_file="$(json_escape "${vsix_file}")"
+  escaped_bundle_tag="$(json_escape "${bundle_tag}")"
+  escaped_bundle_url="$(json_escape "${bundle_url}")"
+  escaped_bundle_file="$(json_escape "${bundle_file}")"
 
   cat <<EOF
 {
@@ -265,7 +344,10 @@ render_config() {
       "VENV_SWITCHER_PYTHON_FILE": "${escaped_python_file}",
       "VENV_SWITCHER_VSIX_TAG": "${escaped_vsix_tag}",
       "VENV_SWITCHER_VSIX_URL": "${escaped_vsix_url}",
-      "VENV_SWITCHER_VSIX_FILE": "${escaped_vsix_file}"
+      "VENV_SWITCHER_VSIX_FILE": "${escaped_vsix_file}",
+      "VENV_SWITCHER_BUNDLE_TAG": "${escaped_bundle_tag}",
+      "VENV_SWITCHER_BUNDLE_URL": "${escaped_bundle_url}",
+      "VENV_SWITCHER_BUNDLE_FILE": "${escaped_bundle_file}"
     }
   },
   "runArgs": ["--env-file=\${localWorkspaceFolder}/.devcontainer/customer-configuration.env"],

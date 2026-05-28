@@ -84,13 +84,21 @@ npm run package:test
 ### Release
 
 ```bash
+scripts/build-secure-bundle
+scripts/verify-secure-bundle build/secure-bundle/gcubed-build-switcher-secure.tar.gz
+
 cd vscode-extension
 npm run package:patch
 # or npm run package:minor
 # or npm run package:major
 ```
 
-The package scripts build a production VSIX and copy it to `release-files/`. For an actual release, confirm changes are on `main`, create/update the GitHub release tagged `latest`, and attach the `release-files/` payload.
+The secure bundle scripts build the wheel and VSIX together, write
+`manifest.json`, verify hashes/sizes, and produce
+`build/secure-bundle/gcubed-build-switcher-secure.tar.gz`. The legacy package
+scripts still build a production VSIX and copy it to `release-files/`. During
+the soft migration, publish both the old release-files payload and the new
+secure bundle.
 
 ## Ownership Boundaries
 

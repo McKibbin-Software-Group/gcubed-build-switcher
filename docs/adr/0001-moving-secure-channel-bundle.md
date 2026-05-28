@@ -51,9 +51,10 @@ deployments should not need to track them during the first migration.
 
 ## Follow-Up
 
-- Define the exact manifest schema and filename.
-- Add release automation that builds the wheel and VSIX, computes hashes, writes
-  the manifest, packages the tarball, verifies it, and uploads it to the secure
-  channel tag.
+- Keep the initial manifest filename `manifest.json` and bundle filename
+  `gcubed-build-switcher-secure.tar.gz` unless customer template integration
+  exposes a better stable name.
+- Promote verified bundles to the secure channel tag only after CI and smoke
+  validation pass.
 - Keep immutable release tags or GitHub releases for forensic/debug use even
   though field templates consume the moving channel.

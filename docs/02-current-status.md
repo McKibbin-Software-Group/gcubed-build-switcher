@@ -32,6 +32,17 @@ Last updated: 2026-05-28
 - `scripts/devcontainer-profile` can generate an ignored active devcontainer
   profile at `.devcontainer/matrix-active/devcontainer.json` with the chosen
   Python artifact, VSIX artifact, and Python extension mode baked in.
+- Secure bundle mechanics now exist locally:
+  `scripts/build-secure-bundle`, `scripts/obtain-secure-bundle`,
+  `scripts/verify-secure-bundle`, and `scripts/install-secure-bundle`.
+  The bundle is `gcubed-build-switcher-secure.tar.gz` containing
+  `manifest.json`, one wheel, and one VSIX. Verification rejects unsafe tar
+  paths, duplicate members, missing/extra files, malformed manifests, and
+  hash/size mismatches.
+- Devcontainer matrix profiles now include `secure-bundle-legacy` and
+  `secure-bundle-python-envs`. The Dockerfile verifies and deploys the VSIX
+  during image build so VS Code can install it from the customer-like path; the
+  setup script verifies the same bundle before installing the wheel.
 - GitHub automation files currently present:
   - `.github/dependabot.yml`
   - `.github/workflows/ci.yml`
@@ -65,10 +76,9 @@ Last updated: 2026-05-28
 - Release behavior is changing deliberately: legacy deployments continue using
   the current release-files shape, while the new bundle path will use one
   intentionally moving secure channel tag such as `latest-secure` until field
-  upgrade mechanics are easier. The secure tarball must be self-describing: its
-  manifest records version, Git commit SHA, build date/time, wheel and VSIX
-  filenames, and SHA-256 hashes. Installer validation of that manifest is still
-  to be implemented.
+  upgrade mechanics are easier. The secure tarball is now self-describing and
+  locally validated; publishing/promotion to a curl-reachable secure channel is
+  still to be wired.
 - A Dependency Review workflow is not present yet.
 - GitHub settings still need final verification after the branch lands:
   Dependency Graph, Dependabot alerts, Dependabot security updates, automatic
@@ -92,30 +102,68 @@ Most recent validation recorded from this documentation/update slice on
 2026-05-28:
 
 ```bash
-bash -n scripts/devcontainer-profile
-shellcheck scripts/devcontainer-profile
-scripts/devcontainer-profile list
-scripts/devcontainer-profile show legacy-baseline
-scripts/devcontainer-profile render new-python-new-vsix-python-envs \
-  --python-url https://example.invalid/gcubed_build_switcher-1.2.3-py3-none-any.whl \
-  --vsix-url https://example.invalid/gcubed-vscode-venv-switcher.vsix | python3 -m json.tool
-scripts/devcontainer-profile prepare legacy-baseline
+bash -n scripts/build-secure-bundle scripts/obtain-secure-bundle \
+  scripts/verify-secure-bundle scripts/install-secure-bundle \
+  scripts/devcontainer-profile \
+  .devcontainer/gcubed-setup/gcubed-build-switcher-dev-setup.sh
+shellcheck scripts/build-secure-bundle scripts/obtain-secure-bundle \
+  scripts/verify-secure-bundle scripts/install-secure-bundle \
+  scripts/devcontainer-profile \
+  .devcontainer/gcubed-setup/gcubed-build-switcher-dev-setup.sh
+python3 -m py_compile scripts/secure_bundle.py
+python3 -m unittest discover -s tests -v
+scripts/build-secure-bundle
+scripts/verify-secure-bundle \
+  build/secure-bundle/gcubed-build-switcher-secure.tar.gz
+scripts/install-secure-bundle \
+  build/secure-bundle/gcubed-build-switcher-secure.tar.gz \
+  --artifact-dir /tmp/gcubed-secure-bundle-install-check \
+  --skip-python-install --sudo never
+scripts/obtain-secure-bundle \
+  build/secure-bundle/gcubed-build-switcher-secure.tar.gz \
+  --output /tmp/gcubed-secure-bundle-obtain-check.tar.gz
+scripts/devcontainer-profile render secure-bundle-python-envs \
+  --bundle-url https://example.invalid/gcubed-build-switcher-secure.tar.gz \
+  | python3 -m json.tool
+scripts/devcontainer-profile prepare secure-bundle-legacy \
+  --bundle-url https://example.invalid/gcubed-build-switcher-secure.tar.gz
 python3 -m json.tool .devcontainer/matrix-active/devcontainer.json
+
+cd vscode-extension
+npm run test:unit
+npm run build
+npm run package:test
+npm run test:socket
+
+cd ..
 git diff --check
 ```
 
 Result:
 
-- The wrapper syntax and shellcheck passed.
-- Profile listing and summary commands passed.
-- Generated profile JSON parsed successfully.
-- `prepare legacy-baseline` wrote the ignored active profile successfully.
+- The wrapper/setup syntax and shellcheck passed.
+- Python unit discovery passed, 34 tests.
+- Secure bundle build produced
+  `build/secure-bundle/gcubed-build-switcher-secure.tar.gz`; validation passed.
+  The local bundle manifest recorded `git.dirty: true` because it was built
+  from this in-progress worktree. The first sandboxed build attempt could not
+  resolve isolated Python build dependencies; the successful run used
+  escalated/network access.
+- Bundle install with `--skip-python-install` deployed `manifest.json` and
+  `gcubed-vscode-venv-switcher.vsix` to a temporary artifact directory.
+- Bundle obtain copied and verified the local bundle.
+- Generated secure-bundle profile JSON parsed successfully.
+- `prepare secure-bundle-legacy` wrote the ignored active profile successfully.
+- Extension unit tests passed, 3 suites / 25 tests.
+- Extension build passed.
+- `npm run package:test` passed after switching VSCE packaging to
+  `.vscodeignore` plus `--no-dependencies`.
+- `npm run test:socket` passed, 13 tests. Required an escalated/unsandboxed run
+  because the default sandbox blocks Unix domain sockets under `/tmp`.
 - `git diff --check` passed.
 
 Gaps:
 
-- Python unit tests and extension npm tests were not rerun for this docs/wrapper
-  slice.
 - No devcontainer was rebuilt from the generated active profile.
 - No live switcher smoke test was run because it requires a configured target
   devcontainer and real build tag.
@@ -162,8 +210,9 @@ Result:
 - Which version source should be authoritative for releases?
 - What exact moving secure channel tag name should be used for the new bundle
   path? Working assumption: `latest-secure`.
-- What exact release asset names and manifest filename should be treated as
-  stable by customer devcontainer templates?
+- Should the stable bundle asset name remain
+  `gcubed-build-switcher-secure.tar.gz` and manifest name remain
+  `manifest.json` for customer devcontainer templates?
 - What repeatable live VS Code/devcontainer smoke path should be documented for
   validating both the legacy and Python Environments API interpreter switchers?
 - What date or customer-baseline signal allows removing the legacy

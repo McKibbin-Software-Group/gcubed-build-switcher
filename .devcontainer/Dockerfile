@@ -12,9 +12,14 @@ ARG VENV_SWITCHER_PYTHON_FILE
 ARG VENV_SWITCHER_VSIX_TAG
 ARG VENV_SWITCHER_VSIX_URL
 ARG VENV_SWITCHER_VSIX_FILE
+ARG VENV_SWITCHER_BUNDLE_TAG
+ARG VENV_SWITCHER_BUNDLE_URL
+ARG VENV_SWITCHER_BUNDLE_FILE
 
 ARG TZ="Australia/Sydney"
 ENV TZ=${TZ}
+
+COPY scripts/secure_bundle.py /usr/local/share/gcubed-build-switcher/secure_bundle.py
 
 # Install uv and node if a version is specified. Note, we're pinning a version
 # of uv to ensure the same version is installed in all images. Doing it this way
@@ -57,19 +62,35 @@ RUN set -eux; \
         vsix_tag="${VENV_SWITCHER_VSIX_TAG:-${VENV_SWITCHER_TAG:-latest}}"; \
         vsix_file="${VENV_SWITCHER_VSIX_FILE:-gcubed-vscode-venv-switcher.vsix}"; \
         echo "VENV_SWITCHER_TAG = '${VENV_SWITCHER_TAG:-latest}'"; \
-        echo "VENV_SWITCHER_PYTHON_TAG = '${python_tag}'"; \
-        echo "VENV_SWITCHER_VSIX_TAG = '${vsix_tag}'"; \
-        if [ -n "${VENV_SWITCHER_PYTHON_URL:-}" ]; then \
-            echo "Downloading explicit Python artifact ${VENV_SWITCHER_PYTHON_URL} -> ${python_file}"; \
-            curl -fL -o "${python_file}" "${VENV_SWITCHER_PYTHON_URL}"; \
+        if [ -n "${VENV_SWITCHER_BUNDLE_URL:-}" ] || [ -n "${VENV_SWITCHER_BUNDLE_TAG:-}" ] || [ -n "${VENV_SWITCHER_BUNDLE_FILE:-}" ]; then \
+            bundle_tag="${VENV_SWITCHER_BUNDLE_TAG:-latest-secure}"; \
+            bundle_file="${VENV_SWITCHER_BUNDLE_FILE:-gcubed-build-switcher-secure.tar.gz}"; \
+            echo "VENV_SWITCHER_BUNDLE_TAG = '${bundle_tag}'"; \
+            if [ -n "${VENV_SWITCHER_BUNDLE_URL:-}" ]; then \
+                echo "Downloading explicit secure bundle ${VENV_SWITCHER_BUNDLE_URL} -> ${bundle_file}"; \
+                curl -fL -o "${bundle_file}" "${VENV_SWITCHER_BUNDLE_URL}"; \
+            else \
+                download_release_asset "${bundle_tag}" "${bundle_file}" "${bundle_file}"; \
+            fi; \
+            python3 /usr/local/share/gcubed-build-switcher/secure_bundle.py install "${bundle_file}" \
+                --artifact-dir /home/vscode/extensions/gcubed-venv-switcher \
+                --skip-python-install \
+                --sudo never; \
         else \
-            download_release_asset "${python_tag}" "${python_file}" "${python_file}"; \
-        fi; \
-        if [ -n "${VENV_SWITCHER_VSIX_URL:-}" ]; then \
-            echo "Downloading explicit VSIX artifact ${VENV_SWITCHER_VSIX_URL} -> gcubed-vscode-venv-switcher.vsix"; \
-            curl -fL -o gcubed-vscode-venv-switcher.vsix "${VENV_SWITCHER_VSIX_URL}"; \
-        else \
-            download_release_asset "${vsix_tag}" "${vsix_file}" gcubed-vscode-venv-switcher.vsix; \
+            echo "VENV_SWITCHER_PYTHON_TAG = '${python_tag}'"; \
+            echo "VENV_SWITCHER_VSIX_TAG = '${vsix_tag}'"; \
+            if [ -n "${VENV_SWITCHER_PYTHON_URL:-}" ]; then \
+                echo "Downloading explicit Python artifact ${VENV_SWITCHER_PYTHON_URL} -> ${python_file}"; \
+                curl -fL -o "${python_file}" "${VENV_SWITCHER_PYTHON_URL}"; \
+            else \
+                download_release_asset "${python_tag}" "${python_file}" "${python_file}"; \
+            fi; \
+            if [ -n "${VENV_SWITCHER_VSIX_URL:-}" ]; then \
+                echo "Downloading explicit VSIX artifact ${VENV_SWITCHER_VSIX_URL} -> gcubed-vscode-venv-switcher.vsix"; \
+                curl -fL -o gcubed-vscode-venv-switcher.vsix "${VENV_SWITCHER_VSIX_URL}"; \
+            else \
+                download_release_asset "${vsix_tag}" "${vsix_file}" gcubed-vscode-venv-switcher.vsix; \
+            fi; \
         fi; \
     fi;
 

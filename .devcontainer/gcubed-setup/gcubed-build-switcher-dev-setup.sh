@@ -11,6 +11,47 @@ enter_directory() {
   echo "Changed directory to: ${PWD}"
 }
 
+install_artifact_secure_bundle() {
+  if [ ! -d "${switcher_artifact_dir}" ]; then
+    return 1
+  fi
+
+  enter_directory "${switcher_artifact_dir}"
+
+  shopt -s nullglob
+  local secure_bundles=(./*.tar.gz)
+  shopt -u nullglob
+
+  if [ ${#secure_bundles[@]} -eq 0 ]; then
+    return 1
+  fi
+
+  if [ ${#secure_bundles[@]} -gt 1 ]; then
+    echo "Found multiple secure bundles: ${secure_bundles[*]}" >&2
+    return 2
+  fi
+
+  echo "Installing G-Cubed build switcher from secure bundle: ${secure_bundles[0]}"
+  if [ -x "${workspace_mount}/scripts/install-secure-bundle" ]; then
+    "${workspace_mount}/scripts/install-secure-bundle" \
+      "${secure_bundles[0]}" \
+      --artifact-dir "${switcher_artifact_dir}" \
+      --uv-bin "${uv_bin}"
+    return 0
+  fi
+
+  if [ -f /usr/local/share/gcubed-build-switcher/secure_bundle.py ]; then
+    python3 /usr/local/share/gcubed-build-switcher/secure_bundle.py install \
+      "${secure_bundles[0]}" \
+      --artifact-dir "${switcher_artifact_dir}" \
+      --uv-bin "${uv_bin}"
+    return 0
+  fi
+
+  echo "No secure bundle installer was found" >&2
+  return 2
+}
+
 install_artifact_python_package() {
   if [ ! -d "${switcher_artifact_dir}" ]; then
     return 1
@@ -77,8 +118,17 @@ echo "Setting up G-Cubed build switcher devcontainer"
 echo "Workspace mount: ${workspace_mount}"
 echo "G-Cubed root: ${gcubed_root}"
 
-if ! install_artifact_python_package; then
-  install_local_source_package
+if install_artifact_secure_bundle; then
+  :
+else
+  secure_bundle_status=$?
+  if [ "${secure_bundle_status}" -ne 1 ]; then
+    exit "${secure_bundle_status}"
+  fi
+
+  if ! install_artifact_python_package; then
+    install_local_source_package
+  fi
 fi
 
 if [ -f "${workspace_mount}/vscode-extension/package.json" ]; then

@@ -16,31 +16,18 @@ Last updated: 2026-05-28
    `src/gcubed_build_switcher/version.py` and `tests/test_runtime_version.py`.
 4. Confirm the moving secure channel tag name, probably `latest-secure`, and
    document that it intentionally moves to the current approved secure bundle.
-5. Decide the secure bundle asset layout:
-   - Python wheel.
-   - VSIX.
-   - `manifest.json` or equivalent self-describing metadata.
-   - Any installer or validation files.
-   - Any legacy release files still needed during migration.
-6. Define the secure bundle manifest schema:
-   - bundle schema version
-   - switcher package version
-   - Git commit SHA
-   - build date/time
-   - wheel filename and SHA-256 hash
-   - VSIX filename and SHA-256 hash
-   - installer/validation filenames and SHA-256 hashes
-7. Add a release workflow or script that builds the wheel and VSIX from the same
-   source version, writes and verifies the manifest, packages the secure
-   tarball, and uploads it to the moving secure channel tag.
-8. Add installer validation that checks the manifest before installing the wheel
-   or VSIX.
-9. Produce a candidate secure bundle at a curl-reachable URL.
-10. Run the production-vs-development devcontainer smoke profiles from
+5. Decide whether the initial stable bundle asset names are final:
+   - `gcubed-build-switcher-secure.tar.gz`
+   - `manifest.json`
+   - `gcubed-vscode-venv-switcher.vsix` inside the bundle and artifact path.
+6. Wire release publishing/promotion so the verified secure bundle is uploaded
+   to the moving secure channel tag after CI and review pass.
+7. Produce a candidate secure bundle at a curl-reachable URL.
+8. Run the production-vs-development devcontainer smoke profiles from
     `.devcontainer/README-SWITCHER-MATRIX.md`.
-11. Merge only after CI, CodeQL, dependency review, and smoke validation are
+9. Merge only after CI, CodeQL, dependency review, and smoke validation are
     green.
-12. Update the customer devcontainer template to consume the moving secure
+10. Update the customer devcontainer template to consume the moving secure
     channel tag when ready.
 
 ## How To Handle Dependabot PRs
@@ -103,6 +90,10 @@ npm run test:unit
 npm run build
 npm run test:socket
 npm run package:test
+
+cd ..
+scripts/build-secure-bundle
+scripts/verify-secure-bundle build/secure-bundle/gcubed-build-switcher-secure.tar.gz
 ```
 
 For a release or runtime change, also run configured smoke tests:
@@ -115,10 +106,8 @@ node vscode-extension/tests/live/runSocketTests.js
 For a candidate release, run these matrix profiles at minimum:
 
 ```bash
-scripts/devcontainer-profile prepare new-python-old-vsix --python-url "<wheel-url>"
-scripts/devcontainer-profile prepare old-python-new-vsix-legacy --vsix-url "<vsix-url>"
-scripts/devcontainer-profile prepare new-python-new-vsix-legacy --python-url "<wheel-url>" --vsix-url "<vsix-url>"
-scripts/devcontainer-profile prepare new-python-new-vsix-python-envs --python-url "<wheel-url>" --vsix-url "<vsix-url>"
+scripts/devcontainer-profile prepare secure-bundle-legacy --bundle-url "<bundle-url>"
+scripts/devcontainer-profile prepare secure-bundle-python-envs --bundle-url "<bundle-url>"
 ```
 
 Rebuild the devcontainer after each `prepare` and run a real switcher smoke test
@@ -133,8 +122,8 @@ when a build tag is available.
   explicitly or rely on the Python extension's rollout path.
 - Expected versioning policy for Python package, VS Code extension, release shim,
   and generated artifacts.
-- Exact release asset names for wheel, VSIX, legacy release file, and any
-  compatibility manifest/tarball.
+- Exact release asset names for the secure bundle, legacy release file, and any
+  compatibility metadata that must remain stable.
 - A real prerequisites repo tag for CLI/end-to-end smoke testing.
 
 ## Blockers / Gaps
@@ -142,7 +131,7 @@ when a build tag is available.
 - Dependency Review workflow is not present yet.
 - GitHub settings still need final verification after the repo files land on
   `main`.
-- Candidate wheel/VSIX assets need curl-reachable URLs before the devcontainer
+- A candidate secure bundle needs a curl-reachable URL before the devcontainer
   matrix can fully prove the migration.
 - Extension socket tests require an execution environment that permits Unix
   domain sockets; the default sandbox returns `EPERM` for AF_UNIX socket

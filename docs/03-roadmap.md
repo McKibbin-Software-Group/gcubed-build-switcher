@@ -32,7 +32,8 @@ Status: partially in place.
 
 ## Phase 2: Release Shape Stabilisation
 
-Status: next major design/implementation slice.
+Status: initial secure-bundle mechanism is in place; publishing and live smoke
+validation are next.
 
 - Pick one authoritative version source for the Python package, VS Code
   extension, runtime `__version__`, and generated release metadata.
@@ -56,6 +57,9 @@ Status: next major design/implementation slice.
 - Require the installer to validate the manifest before installing from the
   bundle. The moving tag is the update channel; the manifest is the audit and
   integrity record.
+- Keep `scripts/build-secure-bundle`, `scripts/obtain-secure-bundle`,
+  `scripts/verify-secure-bundle`, and `scripts/install-secure-bundle` as the
+  local contract test before changing customer devcontainer templates.
 - Treat immutable per-version release tags as a later hardening step, not a
   blocker for the initial secure-bundle migration.
 

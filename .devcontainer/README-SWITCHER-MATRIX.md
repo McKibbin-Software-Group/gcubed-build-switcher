@@ -4,10 +4,10 @@ The default `.devcontainer/devcontainer.json` remains the source-development
 container: it installs this checkout in editable mode and installs npm
 dependencies for the extension.
 
-The matrix configs are customer-like test containers. They download a selectable
-Python artifact and a selectable VSIX into
-`/home/vscode/extensions/gcubed-venv-switcher`, then the setup script installs
-the Python side from that artifact instead of the editable checkout.
+The matrix configs are customer-like test containers. They download either a
+selectable Python artifact plus VSIX, or one secure bundle tarball, into
+`/home/vscode/extensions/gcubed-venv-switcher`. The setup script then installs
+from those artifacts instead of the editable checkout.
 
 ## Flavours
 
@@ -125,6 +125,28 @@ scripts/devcontainer-profile prepare new-python-new-vsix-python-envs \
   --vsix-url "https://github.com/McKibbin-Software-Group/gcubed-build-switcher/releases/latest/download/gcubed-vscode-venv-switcher.vsix"
 ```
 
+Build and verify a local secure bundle:
+
+```bash
+scripts/build-secure-bundle
+scripts/verify-secure-bundle build/secure-bundle/gcubed-build-switcher-secure.tar.gz
+```
+
+Test a secure bundle from an explicit URL using the Python Environments path:
+
+```bash
+scripts/devcontainer-profile prepare secure-bundle-python-envs \
+  --bundle-url "https://github.com/McKibbin-Software-Group/gcubed-build-switcher/releases/download/latest-secure/gcubed-build-switcher-secure.tar.gz"
+```
+
+Test the moving secure channel release asset by tag and filename:
+
+```bash
+scripts/devcontainer-profile prepare secure-bundle-python-envs \
+  --bundle-tag latest-secure \
+  --bundle-file gcubed-build-switcher-secure.tar.gz
+```
+
 Preview exactly what the generated profile will contain without writing the
 active config:
 
@@ -173,23 +195,32 @@ authentication. For full smoke validation, prefer publishing the secure bundle
 to a draft, prerelease, internal test release, or the moving secure channel tag
 once approved.
 
-## Secure Bundle Manifest
+## Secure Bundle Mechanism
 
 The new bundle path should not rely on the moving tag for auditability. The
-secure tarball should include a manifest, probably `manifest.json`, with at
-least:
+secure tarball includes `manifest.json` with:
 
-- bundle schema version
-- switcher package version
-- Git commit SHA
-- build date/time
-- wheel filename and SHA-256 hash
-- VSIX filename and SHA-256 hash
-- installer or validation filenames and SHA-256 hashes
+- `schema_version`
+- `built_at`
+- `package.name`, `package.version`, and `package.requires_python`
+- `extension.name`, `extension.version`, and `extension.publisher`
+- `git.commit` and `git.dirty`
+- exactly one wheel artifact path, byte size, and SHA-256 hash
+- exactly one VSIX artifact path, byte size, and SHA-256 hash
 
-The installer should validate the manifest before installing the wheel or VSIX.
-In this model, `latest-secure` is the update channel and the manifest is the
-audit and integrity record.
+The bundle tooling lives in `scripts/`:
+
+```bash
+scripts/build-secure-bundle
+scripts/obtain-secure-bundle <url-or-path> --output /tmp/gcubed-build-switcher-secure.tar.gz
+scripts/verify-secure-bundle /tmp/gcubed-build-switcher-secure.tar.gz
+scripts/install-secure-bundle /tmp/gcubed-build-switcher-secure.tar.gz
+```
+
+`verify-secure-bundle` rejects unsafe tar paths, duplicate members, links,
+missing/extra files, malformed manifests, and hash or size mismatches before
+anything is extracted or installed. In this model, `latest-secure` is the update
+channel and the manifest is the audit and integrity record.
 
 ## What To Check After Rebuild
 
@@ -230,10 +261,15 @@ profile for you:
 | `VENV_SWITCHER_VSIX_TAG` | Release tag for the VSIX only. |
 | `VENV_SWITCHER_VSIX_URL` | Full URL for the VSIX only. Overrides `VENV_SWITCHER_VSIX_TAG`. |
 | `VENV_SWITCHER_VSIX_FILE` | Release asset name for the VSIX. Defaults to `gcubed-vscode-venv-switcher.vsix`. |
+| `VENV_SWITCHER_BUNDLE_TAG` | Release tag for the secure bundle. Bundle profiles default to `latest-secure`. |
+| `VENV_SWITCHER_BUNDLE_URL` | Full URL for the secure bundle. Overrides `VENV_SWITCHER_BUNDLE_TAG`. |
+| `VENV_SWITCHER_BUNDLE_FILE` | Release asset name for the secure bundle. Defaults to `gcubed-build-switcher-secure.tar.gz`. |
 
 The setup script installs the Python side from `*.whl` when a wheel artifact is
 present. Otherwise it falls back to `uv pip install --system -r pyproject.toml`,
-which preserves the old release path.
+which preserves the old release path. When a secure bundle tarball is present,
+it is verified first; the VSIX and manifest are deployed to the extension
+artifact directory and the wheel is installed from the verified extraction.
 
 ## Migration Matrix
 
@@ -245,6 +281,8 @@ which preserves the old release path.
 | `new-python-new-vsix-legacy` | `matrix-legacy` | candidate wheel | candidate VSIX | legacy fallback |
 | `old-python-new-vsix-python-envs` | `matrix-python-envs` | current release `pyproject.toml` | candidate VSIX | `ms-python.vscode-python-envs` |
 | `new-python-new-vsix-python-envs` | `matrix-python-envs` | candidate wheel | candidate VSIX | `ms-python.vscode-python-envs` |
+| `secure-bundle-legacy` | `matrix-legacy` | verified secure bundle wheel | verified secure bundle VSIX | legacy fallback |
+| `secure-bundle-python-envs` | `matrix-python-envs` | verified secure bundle wheel | verified secure bundle VSIX | `ms-python.vscode-python-envs` |
 
 The first two rows prove the new Python side remains compatible with the live
 extension. The later rows prove the candidate extension works with both Python

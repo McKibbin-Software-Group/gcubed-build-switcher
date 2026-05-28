@@ -80,3 +80,45 @@ jobs:
           path: vscode-extension/test/*.vsix
           if-no-files-found: error
           retention-days: 14
+
+  secure-bundle:
+    name: Secure bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: vscode-extension/package-lock.json
+
+      - name: Install Python build dependency
+        run: python -m pip install wheel
+
+      - name: Install extension dependencies
+        working-directory: vscode-extension
+        run: npm ci
+
+      - name: Build secure bundle
+        run: scripts/build-secure-bundle --require-clean
+
+      - name: Verify secure bundle
+        run: scripts/verify-secure-bundle build/secure-bundle/gcubed-build-switcher-secure.tar.gz
+
+      - name: Upload secure bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gcubed-build-switcher-secure-bundle
+          path: build/secure-bundle/gcubed-build-switcher-secure.tar.gz
+          if-no-files-found: error
+          retention-days: 14
