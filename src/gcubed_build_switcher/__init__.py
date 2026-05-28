@@ -14,6 +14,10 @@ from .venv import prepare_local_venv, get_venv_name
 from .vscode import set_vscode_python_interpreter
 from .config import is_feature_disabled
 from .messaging import display_warning
+from .version import get_package_version
+
+
+__version__ = get_package_version()
 
 
 def activate_or_build_and_activate_venv(build_tag):
@@ -26,6 +30,7 @@ def activate_or_build_and_activate_venv(build_tag):
     Returns:
         bool: True if successful, False otherwise
     """
+    print("G-Cubed build switcher version {}".format(__version__))
 
     # Check if build switching is disabled at the entry point
     if is_feature_disabled("AUTO_BUILD_SWITCHER"):
@@ -66,6 +71,4 @@ def activate_or_build_and_activate_venv(build_tag):
     return False
 
 
-__all__ = ["activate_or_build_and_activate_venv"]
-
-__version__ = "0.1.0"
+__all__ = ["activate_or_build_and_activate_venv", "__version__"]
