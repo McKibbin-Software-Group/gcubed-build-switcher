@@ -31,7 +31,16 @@ code --install-extension test/gcubed-vscode-venv-switcher-test.version.vsix
 
 Then run `Developer: Reload Window` in VS Code.
 
-Production package scripts are versioned by release type:
+Build the legacy production VSIX without changing the version:
+
+```bash
+npm run package:legacy
+```
+
+This checks version metadata, builds a production VSIX, and copies it to
+`../release-files/`.
+
+Production package scripts can also bump the shared version by release type:
 
 ```bash
 npm run package:patch

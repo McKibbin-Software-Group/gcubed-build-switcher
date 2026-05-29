@@ -48,6 +48,7 @@
     "build": "esbuild src/extension.js --bundle --platform=node --external:vscode --outfile=dist/extension.js",
     "build:prod": "esbuild src/extension.js --bundle --minify --platform=node --external:vscode --outfile=dist/extension.js",
     "package:test": "../scripts/sync-version --check && npm run clean && npm run build && vsce package --no-dependencies --out test/gcubed-vscode-venv-switcher-test.version.vsix",
+    "package:legacy": "../scripts/sync-version --check && npm run clean && npm run build:prod && vsce package --no-dependencies --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files",
     "package:patch": "../scripts/sync-version --bump patch && npm run clean && npm run build:prod && vsce package --no-dependencies --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files",
     "package:minor": "../scripts/sync-version --bump minor && npm run clean && npm run build:prod && vsce package --no-dependencies --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files",
     "package:major": "../scripts/sync-version --bump major && npm run clean && npm run build:prod && vsce package --no-dependencies --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files"

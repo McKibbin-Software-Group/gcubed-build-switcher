@@ -89,6 +89,8 @@ scripts/build-secure-bundle
 scripts/verify-secure-bundle build/secure-bundle/gcubed-build-switcher-secure.tar.gz
 
 cd vscode-extension
+npm run package:legacy
+# or, when bumping as part of packaging:
 npm run package:patch
 # or npm run package:minor
 # or npm run package:major

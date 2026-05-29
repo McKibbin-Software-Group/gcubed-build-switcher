@@ -116,15 +116,12 @@ without another version bump:
 
 ```bash
 cd vscode-extension
-npm run clean
-npm run build:prod
-./node_modules/.bin/vsce package \
-  --no-dependencies \
-  --out production/gcubed-vscode-venv-switcher.vsix
-cp production/gcubed-vscode-venv-switcher.vsix \
-  ../release-files/gcubed-vscode-venv-switcher.vsix
+npm run package:legacy
 cd ..
 ```
+
+`package:legacy` checks the version metadata, builds the production VSIX, and
+copies `production/gcubed-vscode-venv-switcher.vsix` into `release-files/`.
 
 If you have not bumped the version yet and want the packaging command to do it,
 choose exactly one command.
