@@ -1,6 +1,6 @@
 [project]
 name = "G-Cubed_Build_Switcher"
-version = "2.1.5"
+version = "2.2.0"
 dependencies = [
     "gcubed-build-switcher @ git+https://github.com/McKibbin-Software-Group/gcubed-build-switcher@main"
 ]

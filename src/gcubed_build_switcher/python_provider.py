@@ -594,11 +594,61 @@ def resolve_prebuilt_python_version_for_specifier(python_specifier: str) -> str:
 
 
 def safe_extract_tar(archive_path, destination):
+    destination_abs = os.path.abspath(destination)
+    os.makedirs(destination_abs, exist_ok=True)
     with tarfile.open(archive_path, "r:gz") as tar:
         members = tar.getmembers()
         for member in members:
-            validate_tar_member(member, destination)
-        tar.extractall(destination, members)
+            validate_tar_member(member, destination_abs)
+        for member in sorted(members, key=lambda item: 0 if item.isdir() else 1):
+            extract_tar_member(tar, member, destination_abs)
+
+
+def extract_tar_member(tar, member, destination):
+    destination_abs = os.path.abspath(destination)
+    target_path = get_tar_member_target_path(member, destination_abs)
+
+    if member.isdir():
+        os.makedirs(target_path, exist_ok=True)
+        apply_tar_member_mode(member, target_path)
+        return
+
+    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+    if os.path.lexists(target_path):
+        raise ValueError("Archive member path already exists: {}".format(member.name))
+
+    if member.isfile():
+        source = tar.extractfile(member)
+        if source is None:
+            raise ValueError("Archive member has no file content: {}".format(member.name))
+        with source:
+            with open(target_path, "wb") as target:
+                shutil.copyfileobj(source, target)
+        apply_tar_member_mode(member, target_path)
+        return
+
+    if member.issym():
+        os.symlink(member.linkname, target_path)
+        return
+
+    if member.islnk():
+        link_target = get_tar_link_target_path(member, destination_abs, target_path)
+        if not os.path.exists(link_target):
+            raise ValueError(
+                "Archive hard link target does not exist: {} -> {}".format(
+                    member.name,
+                    member.linkname,
+                )
+            )
+        os.link(link_target, target_path)
+        apply_tar_member_mode(member, target_path)
+        return
+
+    raise ValueError("Unsupported archive member type: {}".format(member.name))
+
+
+def apply_tar_member_mode(member, target_path):
+    os.chmod(target_path, member.mode & 0o7777)
 
 
 def validate_tar_member(member, destination):
@@ -607,7 +657,7 @@ def validate_tar_member(member, destination):
         raise ValueError("Unsafe archive member path: {}".format(member_name))
 
     destination_abs = os.path.abspath(destination)
-    target_path = os.path.abspath(os.path.join(destination_abs, member_name))
+    target_path = get_tar_member_target_path(member, destination_abs)
     if not is_within_directory(destination_abs, target_path):
         raise ValueError("Archive member escapes destination: {}".format(member_name))
 
@@ -617,9 +667,7 @@ def validate_tar_member(member, destination):
             raise ValueError(
                 "Unsafe archive link target: {} -> {}".format(member_name, link_name)
             )
-        link_target = os.path.abspath(
-            os.path.join(os.path.dirname(target_path), link_name)
-        )
+        link_target = get_tar_link_target_path(member, destination_abs, target_path)
         if not is_within_directory(destination_abs, link_target):
             raise ValueError(
                 "Archive link target escapes destination: {} -> {}".format(
@@ -627,6 +675,18 @@ def validate_tar_member(member, destination):
                     link_name,
                 )
             )
+
+
+def get_tar_member_target_path(member, destination):
+    return os.path.abspath(os.path.join(os.path.abspath(destination), member.name))
+
+
+def get_tar_link_target_path(member, destination, target_path):
+    if member.islnk():
+        return os.path.abspath(
+            os.path.join(os.path.abspath(destination), member.linkname)
+        )
+    return os.path.abspath(os.path.join(os.path.dirname(target_path), member.linkname))
 
 
 def is_safe_relative_path(path):

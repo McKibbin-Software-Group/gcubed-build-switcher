@@ -361,6 +361,21 @@ class PythonProviderTests(unittest.TestCase):
                     os.path.join(temp_dir, "extract"),
                 )
 
+    def test_safe_extract_tar_rejects_symlink_escape(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_path = os.path.join(temp_dir, "bad-link.tar.gz")
+            with tarfile.open(archive_path, "w:gz") as tar:
+                info = tarfile.TarInfo("versions/3.13.11/bin/python")
+                info.type = tarfile.SYMTYPE
+                info.linkname = "../../../../outside"
+                tar.addfile(info)
+
+            with self.assertRaises(ValueError):
+                python_provider.safe_extract_tar(
+                    archive_path,
+                    os.path.join(temp_dir, "extract"),
+                )
+
     def test_all_provider_failure_message_is_support_oriented(self):
         message = python_provider.build_support_message(
             "3.10.13",

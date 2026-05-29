@@ -16,6 +16,8 @@ const {
   activeConnections,
 } = require("../utils/constants")
 
+const LOG_VALUE_MAX_LENGTH = 200
+
 /**
  * Handles an individual connection lifecycle from acceptance to termination
  * Enforces connection limits, processes requests, and ensures proper cleanup
@@ -115,15 +117,16 @@ function receiveClientRequest(clientSocketConnection) {
           console.debug("Stripped UTF-8 BOM from incoming message")
         }
 
-        console.debug(`Processing message: ${messageString.substring(0, 50)}...`)
+        console.debug("Processing socket message")
 
         // 3. Finally validate and resolve/reject
         try {
           resolve(JSON.parse(messageString))
         } catch (jsonError) {
           // When rejecting for invalid JSON
-          console.warn(`Invalid JSON: ${jsonError.message}`)
-          reject(new Error(`Invalid JSON in message: ${jsonError.message}`))
+          const jsonErrorMessage = getErrorMessage(jsonError)
+          console.warn("Invalid JSON in socket message")
+          reject(new Error(`Invalid JSON in message: ${sanitizeLogValue(jsonErrorMessage)}`))
         }
         // can do any other cleanup here before the reject is received and processed...
         return
@@ -174,15 +177,31 @@ function startListeners(clientSocketConnection) {
  * @param {Error} clientError - Error that occurred during processing
  */
 function handleClientError(clientSocketConnection, clientError) {
-  console.error(`Client error: ${clientError.message}`, clientError)
+  const clientErrorMessage = getErrorMessage(clientError)
+  console.error("Client error while handling socket request")
   try {
     sendJsonResponse(clientSocketConnection, {
       success: false,
-      error: `Error - ${clientError.message}`,
+      error: `Error - ${sanitizeLogValue(clientErrorMessage)}`,
     })
   } catch (err) {
     // Ignore errors when sending error responses - we're already in an error state
   }
+}
+
+function getErrorMessage(error) {
+  if (error && typeof error.message === "string") {
+    return error.message
+  }
+  return String(error)
+}
+
+function sanitizeLogValue(value) {
+  const text = String(value === undefined || value === null ? "" : value)
+  return text
+    .replace(/[\r\n\t]/g, " ")
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "?")
+    .slice(0, LOG_VALUE_MAX_LENGTH)
 }
 
 /**
