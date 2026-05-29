@@ -77,7 +77,7 @@ jobs:
         run: npm run package:test
 
       - name: Upload test VSIX artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gcubed-vscode-venv-switcher-vsix
           path: vscode-extension/test/*.vsix
@@ -119,7 +119,7 @@ jobs:
         run: scripts/verify-secure-bundle build/secure-bundle/gcubed-build-switcher-secure.tar.gz
 
       - name: Upload secure bundle artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gcubed-build-switcher-secure-bundle
           path: build/secure-bundle/gcubed-build-switcher-secure.tar.gz
