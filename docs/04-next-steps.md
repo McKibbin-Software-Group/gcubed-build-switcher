@@ -119,6 +119,11 @@ when a build tag is available.
 - Devcontainer runtime marker guaranteed by the customer template or host.
 - Whether the customer devcontainer should install `ms-python.vscode-python-envs`
   explicitly or rely on the Python extension's rollout path.
+- Customer template settings should use the verified scope split:
+  `.vscode/settings.json` for `python.useEnvironmentsExtension`,
+  `python-envs.defaultEnvManager`, and `python-envs.workspaceSearchPaths`;
+  devcontainer `customizations.vscode.settings` for machine-scoped
+  `python-envs.terminal.autoActivationType` and `python-envs.alwaysUseUv`.
 - Exact release asset names for the secure bundle, legacy release file, and any
   compatibility metadata that must remain stable.
 - A real prerequisites repo tag for CLI/end-to-end smoke testing.

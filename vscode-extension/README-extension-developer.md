@@ -86,16 +86,31 @@ A successful Python Environments API switch returns `apiId: "ms-python.vscode-py
 
 ## Devcontainer Settings
 
-For Python Environments rollout validation, keep these settings in the target devcontainer or workspace:
+For Python Environments rollout validation, split the settings by VS Code
+scope.
+
+Workspace/window settings belong in `.vscode/settings.json`:
 
 ```json
 {
   "python.useEnvironmentsExtension": true,
   "python-envs.defaultEnvManager": "ms-python.python:venv",
-  "python-envs.workspaceSearchPaths": ["venv_gcubed_*"],
+  "python-envs.workspaceSearchPaths": ["venv_gcubed_*"]
+}
+```
+
+Machine-scoped settings belong in the devcontainer's
+`customizations.vscode.settings` block:
+
+```json
+{
   "python-envs.terminal.autoActivationType": "off",
   "python-envs.alwaysUseUv": true
 }
 ```
+
+If `python-envs.terminal.autoActivationType` or `python-envs.alwaysUseUv` are
+placed in `.vscode/settings.json`, VS Code greys them out and they may not be
+applied.
 
 The extension warns when the key rollout settings are missing or mismatched. It does not edit workspace settings automatically.

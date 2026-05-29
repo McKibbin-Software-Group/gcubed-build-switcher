@@ -48,17 +48,32 @@ to reset the settings should they change / become incompatible).
 ## Rollout Settings
 
 When the new path has passed live devcontainer validation, update the customer
-devcontainer `.vscode/settings.json` to include:
+devcontainer configuration with the correct VS Code setting scopes.
+
+Put the workspace/window settings in `.vscode/settings.json`:
 
 ```json
 {
   "python.useEnvironmentsExtension": true,
   "python-envs.defaultEnvManager": "ms-python.python:venv",
-  "python-envs.workspaceSearchPaths": ["venv_gcubed_*"],
+  "python-envs.workspaceSearchPaths": ["venv_gcubed_*"]
+}
+```
+
+Put the Python Environments machine-scoped settings in the devcontainer's
+`customizations.vscode.settings` block, not `.vscode/settings.json`:
+
+```json
+{
   "python-envs.terminal.autoActivationType": "off",
   "python-envs.alwaysUseUv": true
 }
 ```
+
+VS Code greys out machine-scoped settings when they are placed in workspace
+settings, and they may not be applied there. `alwaysUseUv` currently defaults
+to `true`, but keeping it explicit in the devcontainer documents the intended
+Python Environments manager behavior.
 
 Do not use `python-envs.pythonProjects` to model individual G-Cubed build
 venvs. Those environments are selected dynamically by build tag. Use
