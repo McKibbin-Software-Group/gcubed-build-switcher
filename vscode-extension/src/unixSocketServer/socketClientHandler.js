@@ -178,7 +178,10 @@ function startListeners(clientSocketConnection) {
  */
 function handleClientError(clientSocketConnection, clientError) {
   const clientErrorMessage = getErrorMessage(clientError)
-  console.error("Client error while handling socket request")
+  console.error(
+    "Client error while handling socket request: %s",
+    sanitizeLogValue(clientErrorMessage)
+  )
   try {
     sendJsonResponse(clientSocketConnection, {
       success: false,
