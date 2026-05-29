@@ -10,7 +10,7 @@ except ImportError:  # pragma: no cover - Python < 3.8 compatibility path.
 
 
 PACKAGE_NAME = "gcubed-build-switcher"
-FALLBACK_VERSION = "2.2.1"
+FALLBACK_VERSION = "2.2.2"
 
 
 def get_package_version():
