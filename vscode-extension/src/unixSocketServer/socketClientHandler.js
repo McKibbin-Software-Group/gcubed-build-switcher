@@ -178,14 +178,13 @@ function startListeners(clientSocketConnection) {
  */
 function handleClientError(clientSocketConnection, clientError) {
   const clientErrorMessage = getErrorMessage(clientError)
-  console.error(
-    "Client error while handling socket request: %s",
-    sanitizeLogValue(clientErrorMessage)
-  )
+  const sanitizedClientErrorMessage = sanitizeLogValue(clientErrorMessage)
+  const formattedClientErrorMessage = `Client error - ${sanitizedClientErrorMessage}`
+  console.error("%s", formattedClientErrorMessage)
   try {
     sendJsonResponse(clientSocketConnection, {
       success: false,
-      error: `Error - ${sanitizeLogValue(clientErrorMessage)}`,
+      error: formattedClientErrorMessage,
     })
   } catch (err) {
     // Ignore errors when sending error responses - we're already in an error state
