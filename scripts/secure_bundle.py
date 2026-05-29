@@ -18,6 +18,12 @@ import tempfile
 import time
 from collections import Counter
 
+SCRIPT_DIR = os.path.dirname(__file__)
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+
+import version_sync
+
 try:
     from urllib.parse import urlparse
     from urllib.request import urlopen
@@ -323,6 +329,12 @@ def build_vsix(repo_root, output_path):
 def build_secure_bundle(repo_root, output_path, require_clean=False):
     repo_root = _as_abs_path(repo_root)
     output_path = _as_abs_path(output_path)
+
+    try:
+        build_version = version_sync.version_from_optional_build_environment(repo_root)
+        version_sync.check_version_files(repo_root, version=build_version)
+    except version_sync.VersionSyncError as error:
+        raise SecureBundleError(str(error))
 
     if require_clean and _git_dirty(repo_root):
         raise SecureBundleError("refusing to build release bundle from dirty tree")

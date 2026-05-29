@@ -32,11 +32,13 @@ Status: partially in place.
 
 ## Phase 2: Release Shape Stabilisation
 
-Status: initial secure-bundle mechanism is in place; publishing and live smoke
-validation are next.
+Status: initial secure-bundle mechanism and single-source version sync are in
+place; publishing and live smoke validation are next.
 
-- Pick one authoritative version source for the Python package, VS Code
-  extension, runtime `__version__`, and generated release metadata.
+- Keep `VERSION` as the authoritative release version source for the Python
+  package, VS Code extension, runtime fallback, release shim, and generated
+  release metadata. `scripts/sync-version --check` should fail builds when
+  those files drift.
 - Build the Python side as a wheel instead of relying only on
   `release-files/pyproject.toml` installing from GitHub `main`.
 - Build the VSIX from the same release process as the wheel.

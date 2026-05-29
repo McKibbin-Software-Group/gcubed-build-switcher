@@ -202,6 +202,57 @@ class SecureBundleTests(unittest.TestCase):
             os.path.exists(os.path.join(artifact_dir, secure_bundle.MANIFEST_FILENAME))
         )
 
+    def test_build_secure_bundle_rejects_unsynchronized_version_metadata(self):
+        os.makedirs(os.path.join(self.repo_root, "release-files"))
+        os.makedirs(os.path.join(self.repo_root, "src", "gcubed_build_switcher"))
+        with open(os.path.join(self.repo_root, "VERSION"), "w") as version_file:
+            version_file.write("1.2.3\n")
+        with open(
+            os.path.join(self.repo_root, "release-files", "pyproject.toml"), "w"
+        ) as pyproject:
+            pyproject.write(
+                "\n".join(
+                    [
+                        "[project]",
+                        'name = "G-Cubed_Build_Switcher"',
+                        'version = "1.2.3"',
+                        "",
+                    ]
+                )
+            )
+        with open(
+            os.path.join(self.repo_root, "src", "gcubed_build_switcher", "version.py"),
+            "w",
+        ) as version_py:
+            version_py.write('FALLBACK_VERSION = "1.2.3"\n')
+        with open(
+            os.path.join(self.repo_root, "vscode-extension", "package-lock.json"),
+            "w",
+        ) as package_lock:
+            json.dump(
+                {
+                    "name": "gcubed-venv-switcher",
+                    "version": "4.5.6",
+                    "lockfileVersion": 3,
+                    "packages": {
+                        "": {
+                            "name": "gcubed-venv-switcher",
+                            "version": "4.5.6",
+                        }
+                    },
+                },
+                package_lock,
+            )
+
+        with self.assertRaisesRegex(
+            secure_bundle.SecureBundleError,
+            "version metadata is out of sync",
+        ):
+            secure_bundle.build_secure_bundle(
+                self.repo_root,
+                self._bundle_path("bundle.tar.gz"),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

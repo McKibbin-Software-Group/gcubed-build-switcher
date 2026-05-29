@@ -1,7 +1,7 @@
 {
   "name": "gcubed-venv-switcher",
   "displayName": "G-Cubed VS Code Python venv switcher",
-  "version": "1.1.2",
+  "version": "1.2.2",
   "publisher": "mckibbin-software-group",
   "repository": "none",
   "description": "Switches VS Code Python interpreter venvs through local Unix socket IPC",
@@ -40,16 +40,16 @@
   "scripts": {
     "test:unit": "jest -c tests/jest.unit.config.js",
     "test:socket": "jest -c tests/unixSocketServer/jest.config.js",
-    "version:patch": "npm version patch",
-    "version:minor": "npm version minor",
-    "version:major": "npm version major",
+    "version:patch": "../scripts/sync-version --bump patch",
+    "version:minor": "../scripts/sync-version --bump minor",
+    "version:major": "../scripts/sync-version --bump major",
     "clean": "rm -rf dist production test && mkdir -p dist production test",
     "copy-to-release-files": "cp production/*.vsix ../release-files",
     "build": "esbuild src/extension.js --bundle --platform=node --external:vscode --outfile=dist/extension.js",
     "build:prod": "esbuild src/extension.js --bundle --minify --platform=node --external:vscode --outfile=dist/extension.js",
-    "package:test": "npm run clean && npm run build && vsce package --no-dependencies --out test/gcubed-vscode-venv-switcher-test.version.vsix",
-    "package:patch": "npm version patch && npm run clean && npm run build:prod && vsce package --no-dependencies --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files",
-    "package:minor": "npm version minor && npm run clean && npm run build:prod && vsce package --no-dependencies --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files",
-    "package:major": "npm version major && npm run clean && npm run build:prod && vsce package --no-dependencies --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files"
+    "package:test": "../scripts/sync-version --check && npm run clean && npm run build && vsce package --no-dependencies --out test/gcubed-vscode-venv-switcher-test.version.vsix",
+    "package:patch": "../scripts/sync-version --bump patch && npm run clean && npm run build:prod && vsce package --no-dependencies --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files",
+    "package:minor": "../scripts/sync-version --bump minor && npm run clean && npm run build:prod && vsce package --no-dependencies --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files",
+    "package:major": "../scripts/sync-version --bump major && npm run clean && npm run build:prod && vsce package --no-dependencies --out production/gcubed-vscode-venv-switcher.vsix && npm run copy-to-release-files"
   }
 }

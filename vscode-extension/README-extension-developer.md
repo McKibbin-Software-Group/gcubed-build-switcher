@@ -39,7 +39,10 @@ npm run package:minor
 npm run package:major
 ```
 
-They write a production VSIX and copy it to `../release-files/`.
+These scripts call `../scripts/sync-version --bump <part>` before packaging, so
+the VSIX version stays aligned with the Python package, runtime fallback,
+release shim, and `VERSION`. They write a production VSIX and copy it to
+`../release-files/`.
 
 ## Runtime IPC
 

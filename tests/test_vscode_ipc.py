@@ -1,4 +1,5 @@
 import json
+import io
 import unittest
 from unittest import mock
 
@@ -73,16 +74,21 @@ class VSCodeIpcCompatibilityTests(unittest.TestCase):
         self.assertTrue(fake_socket.closed)
 
     def test_python_client_accepts_new_extension_response_shape(self):
-        fake_socket = self._run_with_response(
-            {
-                "success": True,
-                "message": "Switched to /workspace/project/venv_gcubed_c_0002/bin/python",
-                "requestedPath": "/workspace/project/venv_gcubed_c_0002/bin/python",
-                "apiId": "ms-python.vscode-python-envs",
-            }
-        )
+        with mock.patch("sys.stdout", new=io.StringIO()) as stdout:
+            fake_socket = self._run_with_response(
+                {
+                    "success": True,
+                    "message": "Switched to /workspace/project/venv_gcubed_c_0002/bin/python",
+                    "requestedPath": "/workspace/project/venv_gcubed_c_0002/bin/python",
+                    "apiId": "ms-python.vscode-python-envs",
+                }
+            )
 
         self.assertTrue(fake_socket.closed)
+        self.assertIn(
+            "VS Code Python API used: ms-python.vscode-python-envs",
+            stdout.getvalue(),
+        )
 
     def _run_with_response(self, response_object):
         response = json.dumps(response_object).encode("utf-8") + b"\0"

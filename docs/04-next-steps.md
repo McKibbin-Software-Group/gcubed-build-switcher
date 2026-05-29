@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 ## Immediate Pickup
 
@@ -12,22 +12,20 @@ Last updated: 2026-05-28
    - Secret scanning enabled where available.
    - Push protection enabled where available.
    - Branch protection on `main` requires CI and CodeQL before merge.
-3. Finish the single-source version work that is currently in progress in
-   `src/gcubed_build_switcher/version.py` and `tests/test_runtime_version.py`.
-4. Confirm the moving secure channel tag name, probably `latest-secure`, and
+3. Confirm the moving secure channel tag name, probably `latest-secure`, and
    document that it intentionally moves to the current approved secure bundle.
-5. Decide whether the initial stable bundle asset names are final:
+4. Decide whether the initial stable bundle asset names are final:
    - `gcubed-build-switcher-secure.tar.gz`
    - `manifest.json`
    - `gcubed-vscode-venv-switcher.vsix` inside the bundle and artifact path.
-6. Wire release publishing/promotion so the verified secure bundle is uploaded
+5. Wire release publishing/promotion so the verified secure bundle is uploaded
    to the moving secure channel tag after CI and review pass.
-7. Produce a candidate secure bundle at a curl-reachable URL.
-8. Run the production-vs-development devcontainer smoke profiles from
+6. Produce a candidate secure bundle at a curl-reachable URL.
+7. Run the production-vs-development devcontainer smoke profiles from
     `.devcontainer/README-SWITCHER-MATRIX.md`.
-9. Merge only after CI, CodeQL, dependency review, and smoke validation are
+8. Merge only after CI, CodeQL, dependency review, and smoke validation are
     green.
-10. Update the customer devcontainer template to consume the moving secure
+9. Update the customer devcontainer template to consume the moving secure
     channel tag when ready.
 
 ## How To Handle Dependabot PRs
@@ -84,6 +82,7 @@ standalone `devcontainer` CLI is installed and working.
 
 ```bash
 python3 -m unittest discover -s tests -v
+scripts/sync-version --check
 
 cd vscode-extension
 npm run test:unit
@@ -120,8 +119,6 @@ when a build tag is available.
 - Devcontainer runtime marker guaranteed by the customer template or host.
 - Whether the customer devcontainer should install `ms-python.vscode-python-envs`
   explicitly or rely on the Python extension's rollout path.
-- Expected versioning policy for Python package, VS Code extension, release shim,
-  and generated artifacts.
 - Exact release asset names for the secure bundle, legacy release file, and any
   compatibility metadata that must remain stable.
 - A real prerequisites repo tag for CLI/end-to-end smoke testing.

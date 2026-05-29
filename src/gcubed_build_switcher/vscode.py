@@ -75,6 +75,8 @@ def set_vscode_python_interpreter(build_tag):
             print(
                 f"VSCode Python interpreter set to: {responseObject.get('requestedPath', python_path)}"
             )
+            if responseObject.get("apiId"):
+                print(f"VS Code Python API used: {responseObject.get('apiId')}")
             return True
         else:
             print(

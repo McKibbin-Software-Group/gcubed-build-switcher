@@ -84,6 +84,7 @@ npm run package:test
 ### Release
 
 ```bash
+scripts/sync-version --check
 scripts/build-secure-bundle
 scripts/verify-secure-bundle build/secure-bundle/gcubed-build-switcher-secure.tar.gz
 
@@ -93,8 +94,13 @@ npm run package:patch
 # or npm run package:major
 ```
 
-The secure bundle scripts build the wheel and VSIX together, write
-`manifest.json`, verify hashes/sizes, and produce
+`VERSION` is the release version source for the Python package, VS Code
+extension, runtime fallback, npm lockfile metadata, and release shim. Use
+`scripts/sync-version --bump patch|minor|major` for release bumps, or
+`scripts/sync-version --from-build-env --check` when a release build is driven
+by `GCUBED_BUILD_SWITCHER_VERSION`, a `vX.Y.Z` GitHub ref, or an exact git tag.
+The secure bundle scripts check this metadata before building the wheel and
+VSIX together, write `manifest.json`, verify hashes/sizes, and produce
 `build/secure-bundle/gcubed-build-switcher-secure.tar.gz`. The legacy package
 scripts still build a production VSIX and copy it to `release-files/`. During
 the soft migration, publish both the old release-files payload and the new
