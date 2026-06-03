@@ -1,5 +1,4 @@
 import os
-import tempfile
 import unittest
 from unittest import mock
 
@@ -14,42 +13,24 @@ from gcubed_build_switcher import config
 
 
 class ConfigurationTests(unittest.TestCase):
-    def test_python_install_root_defaults_under_user_home(self):
-        with tempfile.TemporaryDirectory() as home_dir:
-            with mock.patch.dict(os.environ, {"HOME": home_dir}, clear=True):
-                install_root = config.get_python_install_root()
+    def test_required_uv_version_defaults_to_repo_policy(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            required_uv_version = config.get_required_uv_version()
 
-            self.assertEqual(
-                install_root,
-                os.path.join(home_dir, ".gcubed", "python-builds", "pyenv"),
-            )
+        self.assertEqual(required_uv_version, "0.11.18")
 
-    def test_python_install_root_env_override_wins(self):
+    def test_required_uv_version_env_override_wins(self):
         with mock.patch.dict(
             os.environ,
             {
                 "GCUBED_ROOT": "/tmp/gcubed-root",
-                "GCUBED_PYTHON_INSTALL_ROOT": "/opt/gcubed/python-builds/pyenv",
+                "GCUBED_REQUIRED_UV_VERSION": "0.11.19",
             },
             clear=True,
         ):
-            install_root = config.get_python_install_root()
+            required_uv_version = config.get_required_uv_version()
 
-        self.assertEqual(install_root, "/opt/gcubed/python-builds/pyenv")
-
-    def test_python_install_root_expands_user_override(self):
-        with tempfile.TemporaryDirectory() as home_dir:
-            with mock.patch.dict(
-                os.environ,
-                {
-                    "HOME": home_dir,
-                    "GCUBED_PYTHON_INSTALL_ROOT": "~/custom-python-cache",
-                },
-                clear=True,
-            ):
-                install_root = config.get_python_install_root()
-
-        self.assertEqual(install_root, os.path.join(home_dir, "custom-python-cache"))
+        self.assertEqual(required_uv_version, "0.11.19")
 
     def test_devcontainer_detection_uses_explicit_runtime_markers(self):
         with mock.patch.dict(os.environ, {}, clear=True):

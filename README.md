@@ -58,21 +58,17 @@ Python unit tests can be run with:
 python3 -m unittest discover -s tests -v
 ```
 
-Inside a devcontainer, the switcher creates build virtual environments from the
-ambient Python installed in the container. Outside a devcontainer, when a wheel
-declares `Requires-Python`, the switcher reads that metadata before creating the
-virtual environment, chooses the lowest exact matching CPython patch version from
-the configured prebuilt Python manifest, and creates the venv with that
-interpreter. A `.python-version` file is still supported outside devcontainers as
-a deprecated fallback when wheels do not declare `Requires-Python`.
+The switcher reads wheel `Requires-Python` metadata before creating the virtual
+environment and asks uv to create the environment with uv-managed Python:
+`uv venv --managed-python --python <request>`. Exact wheel constraints such as
+`==3.13.11` are passed through as exact requests. Common lower-bound ranges such
+as `>=3.13,<3.14` are reduced to the lowest usable uv request, for example
+`3.13`. Missing or ambiguous metadata fails loudly.
 
-Prebuilt Python archives are cached under `~/.gcubed/python-builds/pyenv` by
-default. Set `GCUBED_PYTHON_INSTALL_ROOT` to use a shared/pre-provisioned
-location such as `/opt/gcubed/python-builds/pyenv`.
-
-If prebuilt Python release assets are republished, remove the affected cached
-version directory, for example
-`~/.gcubed/python-builds/pyenv/versions/3.13.11`, before retrying.
+Inside a devcontainer, remote container, or Codespace, the switcher first runs
+`uv self update` using the configured required uv version. The default required
+version is `0.11.18`; set `GCUBED_REQUIRED_UV_VERSION` only for controlled
+testing or rollout overrides. `.python-version` files are ignored.
 
 Generated build virtual environments install `gcubed-build-switcher` directly so
 model scripts can continue to switch builds after VS Code changes to a

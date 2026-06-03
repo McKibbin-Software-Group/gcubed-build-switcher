@@ -18,10 +18,10 @@ from .config import (
 )
 from .packages import install_packages
 from .python_provider import (
-    ensure_python_available,
-    resolve_prebuilt_python_version_for_specifier,
+    resolve_uv_python_request_for_specifier,
     PythonProviderError,
 )
+from .uv_runtime import update_uv_for_devcontainer_if_required
 from .wheel_metadata import get_combined_requires_python, WheelMetadataError
 
 
@@ -178,8 +178,8 @@ def ensure_runtime_support_packages(python_path: str, gcubed_root: str) -> bool:
     """
     Ensure generated venvs can import the switcher after VS Code activates them.
 
-    Build venvs may use an exact prebuilt Python that cannot see packages installed
-    into the devcontainer's global Python, so install this support package directly.
+    Build venvs use uv-managed Python and cannot rely on packages installed into
+    the devcontainer's global Python, so install this support package directly.
     """
     if venv_has_runtime_support_packages(python_path):
         return True
@@ -362,52 +362,41 @@ def create_venv_for_build(build_tag):
             os.path.join(temp_dir_path, "requirements*.txt")
         )
 
+        requires_python = get_combined_requires_python(wheel_files)
+        python_request = resolve_uv_python_request_for_specifier(requires_python)
+        print(
+            "Wheel metadata declares Requires-Python '{}'; requesting uv-managed "
+            "Python {}.".format(
+                requires_python,
+                python_request,
+            )
+        )
+
+        running_in_devcontainer = is_running_in_devcontainer()
+        update_uv_for_devcontainer_if_required(running_in_devcontainer)
+
         print(f"Creating virtual environment for build {build_tag}...")
-        venv_cmd = ["uv", "venv", "--system-site-packages", venv_name]
-        if is_running_in_devcontainer():
+        venv_cmd = [
+            "uv",
+            "venv",
+            "--managed-python",
+            "--python",
+            python_request,
+            venv_name,
+        ]
+        if running_in_devcontainer:
             print(
-                "Devcontainer detected; using ambient Python for virtual "
+                "Devcontainer detected; using uv-managed Python for virtual "
                 "environment creation."
             )
         else:
             python_version_file = os.path.join(temp_dir_path, ".python-version")
-            python_version = None
             if os.path.exists(python_version_file):
-                with open(python_version_file) as f:
-                    python_version = f.read().strip()
-
-            requires_python = get_combined_requires_python(wheel_files)
-
-            if requires_python:
-                exact_python_version = resolve_prebuilt_python_version_for_specifier(
-                    requires_python
-                )
                 print(
-                    "Wheel metadata declares Requires-Python '{}'; "
-                    "requesting CPython {}.".format(
-                        requires_python,
-                        exact_python_version,
-                    )
+                    ".python-version file found but ignored; wheel Requires-Python "
+                    "metadata is now the source of truth for Python version "
+                    "selection."
                 )
-                if python_version:
-                    print(
-                        ".python-version file found but ignored; wheel metadata is "
-                        "now the source of truth for Python version selection."
-                    )
-                python_executable = ensure_python_available(exact_python_version)
-                venv_cmd.extend(["--python", python_executable])
-            elif python_version:
-                print(
-                    ".python-version file found - requesting version: {} "
-                    "(deprecated; prefer wheel Requires-Python metadata)".format(
-                        python_version,
-                    )
-                )
-                print(f"Resolving Python {python_version} (from .python-version)...")
-                python_executable = ensure_python_available(python_version)
-                venv_cmd.extend(["--python", python_executable])
-            else:
-                print("No specific Python version requested")
 
         subprocess.run(venv_cmd, cwd=gcubed_root, check=True, env=get_uv_env())
 

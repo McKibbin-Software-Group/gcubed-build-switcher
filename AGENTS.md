@@ -9,10 +9,13 @@ Start with `docs/00-START-HERE.md`; use it as the project-memory map.
 
 - Keep the Python side compatible with `requires-python = ">=3.6"` unless the
   project explicitly raises that floor.
-- In devcontainers, venv creation uses the ambient container Python. Do not
-  reintroduce `.python-version`, wheel `Requires-Python`, or prebuilt-Python
-  acquisition there unless the devcontainer Python strategy changes. Preserve
-  the non-devcontainer interpreter-provider path.
+- Venv creation always derives its Python request from wheel
+  `Requires-Python` metadata and uses uv-managed Python via
+  `uv venv --managed-python --python <request>`. Do not reintroduce
+  `.python-version`, system-Python probing, or MSG prebuilt-Python acquisition
+  unless the Python strategy changes explicitly.
+- In devcontainer-like environments, the Python package updates uv to the
+  configured required version before creating build venvs.
 - The Python package currently shells out to `git` and `uv`; prefer the existing
   command-based flow over heavier abstractions unless there is a clear
   reliability or coverage win.

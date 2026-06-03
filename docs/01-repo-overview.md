@@ -9,9 +9,10 @@ This repo ships the G-Cubed build switcher used by customer devcontainers. It le
 - Python package: `src/gcubed_build_switcher/`
   - `cli.py` exposes `gcubed-switch <build_tag>`.
   - `__init__.py` exposes `activate_or_build_and_activate_venv(build_tag)` and honors `GCUBED_CODE_AUTO_BUILD_SWITCHER_DISABLED`.
-  - `venv.py` validates build tags, creates/verifies `${GCUBED_ROOT}/venv_gcubed_<build_tag>`, installs wheels/requirements from a temporary prerequisites clone, installs runtime support packages into generated venvs, and configures optional Rich tracebacks. In devcontainers it uses the ambient Python for new venvs.
-  - `wheel_metadata.py` reads wheel `Requires-Python` metadata. Outside devcontainers, venv creation prefers this metadata over `.python-version`.
-  - `python_provider.py` resolves exact CPython patch versions through cache, explicit path handling, system Python, or prebuilt manifest/archive download with checksum and safe extraction when non-devcontainer venv creation requests a specific interpreter.
+  - `venv.py` validates build tags, creates/verifies `${GCUBED_ROOT}/venv_gcubed_<build_tag>`, installs wheels/requirements from a temporary prerequisites clone, installs runtime support packages into generated venvs, and configures optional Rich tracebacks. It always creates build venvs with uv-managed Python.
+  - `wheel_metadata.py` reads wheel `Requires-Python` metadata.
+  - `python_provider.py` reduces wheel `Requires-Python` metadata to a uv Python request such as `3.13.11` or `3.13`.
+  - `uv_runtime.py` updates uv to the configured required version in devcontainer-like environments before managed-Python venv creation.
   - `vscode.py` sends null-terminated JSON over `GCUBED_VENV_SOCKET_PATH` to request `set-interpreter`.
 - VS Code extension: `vscode-extension/`
   - Starts a Unix domain socket server on startup.
@@ -26,11 +27,12 @@ This repo ships the G-Cubed build switcher used by customer devcontainers. It le
 2. `src/gcubed_build_switcher/__init__.py` checks whether `GCUBED_CODE_AUTO_BUILD_SWITCHER_DISABLED` is present and exits early if so.
 3. `venv.prepare_local_venv()` looks for `${GCUBED_ROOT}/venv_gcubed_<build_tag>/bin/python` and verifies that `GCUBED_CODE_PACKAGE_NAME` is installed using `uv pip show`.
 4. If missing, `venv.create_venv_for_build()` clones `GCUBED_PYTHON_PREREQUISITES_REPO` at the requested tag into a temporary directory.
-5. In devcontainers, venv creation uses the ambient container Python and skips wheel `Requires-Python` / `.python-version` interpreter acquisition.
-6. Outside devcontainers, wheel `Requires-Python` metadata is preferred for interpreter selection; `.python-version` is only a deprecated fallback when wheels do not declare `Requires-Python`.
-7. Any `*.whl` and `requirements*.txt` files found in the tag are installed into the build venv.
-8. `vscode.set_vscode_python_interpreter()` sends a null-terminated JSON message over `GCUBED_VENV_SOCKET_PATH` to request `set-interpreter`.
-9. The VS Code extension receives the request in `vscode-extension/src/unixSocketServer/`, then `handlers/interpreterHandler.js` resolves the path and asks `src/python/environmentSelector.js` to refresh, resolve, and select the interpreter through the active Microsoft API implementation.
+5. Wheel `Requires-Python` metadata is reduced to a uv Python request. Missing, invalid, or ambiguous metadata fails loudly.
+6. In devcontainer-like environments, `uv_runtime.py` runs `uv self update <required-version>` before venv creation. The default required uv version is `0.11.18`.
+7. `venv.create_venv_for_build()` runs `uv venv --managed-python --python <request> <venv_name>` so Python comes from uv's managed distribution, not the ambient system Python or an MSG archive.
+8. Any `*.whl` and `requirements*.txt` files found in the tag are installed into the build venv.
+9. `vscode.set_vscode_python_interpreter()` sends a null-terminated JSON message over `GCUBED_VENV_SOCKET_PATH` to request `set-interpreter`.
+10. The VS Code extension receives the request in `vscode-extension/src/unixSocketServer/`, then `handlers/interpreterHandler.js` resolves the path and asks `src/python/environmentSelector.js` to refresh, resolve, and select the interpreter through the active Microsoft API implementation.
 
 ## Directory Map
 
@@ -49,11 +51,12 @@ This repo ships the G-Cubed build switcher used by customer devcontainers. It le
 ## Important Environment Variables
 
 - `GCUBED_ROOT`: root directory where build-specific venvs and temporary prerequisite clones are created.
-- `GCUBED_PYTHON_PREREQUISITES_REPO`: git repo containing build-tagged wheels, requirements files, and optional `.python-version`.
+- `GCUBED_PYTHON_PREREQUISITES_REPO`: git repo containing build-tagged wheels and requirements files.
 - `GCUBED_CODE_PACKAGE_NAME`: package name used to verify a venv contains the expected G-Cubed library.
 - `GCUBED_CODE_AUTO_BUILD_SWITCHER_DISABLED`: when present with any value, disables automatic switching.
-- `GCUBED_DEVCONTAINER`: explicit marker that this is a G-Cubed devcontainer. Truthy values make venv creation use ambient Python; `0`, `false`, `no`, and `off` are treated as disabled.
+- `GCUBED_DEVCONTAINER`: explicit marker that this is a G-Cubed devcontainer. Truthy values make the switcher update uv before venv creation; `0`, `false`, `no`, and `off` are treated as disabled.
 - `DEVCONTAINER`, `REMOTE_CONTAINERS`, `CODESPACES`: additional devcontainer/Codespaces markers recognized by the switcher.
+- `GCUBED_REQUIRED_UV_VERSION`: optional override for the uv version used by devcontainer-like environments. Default: `0.11.18`.
 - `GCUBED_VENV_SOCKET_PATH`: Unix socket path shared by Python and the extension, default `/tmp/gcubed_venv_switcher.sock`.
 - `GCUBED_VENV_NAME_PREFIX`: venv name prefix, default `venv_gcubed_`.
 - `RICH_TRACEBACKS`: when present, `venv.py` writes Rich traceback setup into the target venv's `sitecustomize.py`.
@@ -110,18 +113,17 @@ secure bundle.
 
 ## Ownership Boundaries
 
-- Python owns build tag validation, venv creation, package installation, non-devcontainer Python interpreter acquisition, and IPC client requests.
+- Python owns build tag validation, uv-managed venv creation, package installation, devcontainer uv self-update, and IPC client requests.
 - The VS Code extension owns socket server lifecycle, request validation, and VS Code interpreter switching.
-- The prerequisites repo owns build-tagged wheels, requirements files, and optional deprecated `.python-version` files.
-- The prebuilt Python manifest owns available exact CPython archives by platform.
+- The prerequisites repo owns build-tagged wheels, requirements files, and wheel `Requires-Python` metadata.
+- uv owns managed Python acquisition from Astral's Python distribution.
 - Release artifacts are generated outputs; do not hand-edit `.vsix` files.
 
 ## Maintenance Notes
 
 - Keep the Python side compatible with `requires-python = ">=3.6"` unless the project explicitly raises that floor.
-- Preserve ambient-Python venv creation in devcontainers until the devcontainer Python strategy changes.
-- Preserve the non-devcontainer Python provider path: wheel `Requires-Python` metadata resolves to the lowest exact matching CPython patch version in the prebuilt manifest, then `uv venv --python <resolved-python>` creates the venv. `.python-version` remains only a deprecated fallback.
-- Future Python-provider work should preserve the ability to use `uv pip` for fast package installs even if interpreter acquisition moves elsewhere.
+- Preserve uv-managed Python venv creation unless the Python strategy changes explicitly. Do not reintroduce `.python-version`, ambient system-Python selection, or MSG prebuilt-Python acquisition.
+- Future Python-provider work should keep the provider as a lightweight resolver from wheel `Requires-Python` metadata to uv Python requests; uv should own downloading/installing Python.
 - Python Environments extension support should live in the VS Code extension, not the Python package. The Python package should keep requesting a specific `venv_gcubed_*` interpreter over IPC; the VS Code extension should adapt that request to either `ms-python.vscode-python-envs` or the legacy `ms-python.python` API.
 - When enabling the new Python Environments extension in customer
   devcontainers, put `python.useEnvironmentsExtension`,

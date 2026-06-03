@@ -37,13 +37,7 @@ DEVCONTAINER_MARKER_ENV_VARS = (
     "CODESPACES",
 )
 
-DEFAULT_PYTHON_INSTALL_ROOT = "~/.gcubed/python-builds/pyenv"
-DEFAULT_PYTHON_PREBUILT_MANIFEST_URL = (
-    "https://github.com/McKibbin-Software-Group/gcubed-python-builds/releases/download/"
-    "python-builds-latest/manifest.json"
-)
-DEFAULT_PYTHON_DOWNLOAD_TIMEOUT_SECONDS = 60
-DEFAULT_PYTHON_PROVIDER_ORDER = "cache,path,system,prebuilt"
+DEFAULT_REQUIRED_UV_VERSION = "0.11.18"
 DEFAULT_BUILD_SWITCHER_INSTALL_SPEC = (
     "gcubed-build-switcher @ "
     "git+https://github.com/McKibbin-Software-Group/gcubed-build-switcher@main"
@@ -109,45 +103,12 @@ def get_prerequisites_repo_url() -> str:
     return get_required_env_var("GCUBED_PYTHON_PREREQUISITES_REPO")
 
 
-def get_python_install_root() -> str:
-    """Get the root directory for cached MSG Python builds."""
-    configured_root = get_optional_env_var("GCUBED_PYTHON_INSTALL_ROOT")
-    if configured_root:
-        return os.path.expanduser(configured_root)
-
-    return os.path.expanduser(DEFAULT_PYTHON_INSTALL_ROOT)
-
-
-def get_python_prebuilt_manifest_url() -> str:
-    """Get the manifest URL for MSG prebuilt Python archives."""
+def get_required_uv_version() -> str:
+    """Get the uv version required for devcontainer venv creation."""
     return get_optional_env_var(
-        "GCUBED_PYTHON_PREBUILT_MANIFEST_URL",
-        DEFAULT_PYTHON_PREBUILT_MANIFEST_URL,
-    )
-
-
-def get_python_download_timeout_seconds() -> int:
-    """Get the timeout for Python manifest/archive downloads."""
-    value = get_optional_env_var("GCUBED_PYTHON_DOWNLOAD_TIMEOUT_SECONDS")
-    if value is None:
-        return DEFAULT_PYTHON_DOWNLOAD_TIMEOUT_SECONDS
-
-    try:
-        timeout = int(value)
-    except ValueError:
-        return DEFAULT_PYTHON_DOWNLOAD_TIMEOUT_SECONDS
-
-    if timeout <= 0:
-        return DEFAULT_PYTHON_DOWNLOAD_TIMEOUT_SECONDS
-    return timeout
-
-
-def get_python_provider_order() -> str:
-    """Get the ordered Python provider chain."""
-    return get_optional_env_var(
-        "GCUBED_PYTHON_PROVIDER_ORDER",
-        DEFAULT_PYTHON_PROVIDER_ORDER,
-    )
+        "GCUBED_REQUIRED_UV_VERSION",
+        DEFAULT_REQUIRED_UV_VERSION,
+    ) or DEFAULT_REQUIRED_UV_VERSION
 
 
 def get_build_switcher_install_spec() -> str:

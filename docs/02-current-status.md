@@ -1,13 +1,13 @@
 # Current Status
 
-Last updated: 2026-05-29
+Last updated: 2026-06-03
 
 ## Working State
 
-- `VERSION` is the release version source: `1.2.2`.
-- Python package version in root `pyproject.toml`: `1.2.2`.
-- VS Code extension package version: `1.2.2`.
-- `release-files/pyproject.toml` version: `1.2.2` and installs
+- `VERSION` is the release version source: `2.2.2`.
+- Python package version in root `pyproject.toml`: `2.2.2`.
+- VS Code extension package version: `2.2.2`.
+- `release-files/pyproject.toml` version: `2.2.2` and installs
   `gcubed-build-switcher` from GitHub `main`.
 - `scripts/sync-version` synchronizes `VERSION`, root `pyproject.toml`,
   `release-files/pyproject.toml`, `src/gcubed_build_switcher/version.py`,
@@ -18,11 +18,13 @@ Last updated: 2026-05-29
 - Runtime reporting now prints the Python switcher version whenever the CLI is
   invoked, avoids duplicate version banners during a switch, and displays the
   VS Code Python API id returned by the extension on successful socket switches.
-- In devcontainers, Python venv creation uses the ambient Python and skips wheel
-  `Requires-Python`/`.python-version` interpreter acquisition. Outside
-  devcontainers, it still prefers wheel `Requires-Python` metadata, resolves the
-  lowest matching exact CPython patch version from the prebuilt manifest, and
-  only uses `.python-version` as a deprecated fallback.
+- Python venv creation now always uses wheel `Requires-Python` metadata and
+  `uv venv --managed-python --python <request>`, so Python comes from uv's
+  managed distribution. `.python-version`, ambient system-Python selection, and
+  MSG prebuilt-Python acquisition are no longer used.
+- In devcontainer-like environments, the switcher runs
+  `uv self update <required-version>` before venv creation. The default required
+  uv version is `0.11.18`.
 - Generated build venvs install `gcubed-build-switcher` and `rich` so scripts
   can continue importing the switcher after VS Code changes interpreter.
 - Python and extension IPC use null-terminated UTF-8 JSON over a Unix domain
@@ -100,12 +102,23 @@ Last updated: 2026-05-29
   still needs live multi-root/devcontainer validation.
 - `SERVER_SOCKET_MODE = 0o666` should be confirmed as acceptable for the target
   devcontainer security model.
-- Prebuilt Python support depends on manifest reachability, platform coverage,
-  archive checksum integrity, and local cache state.
+- uv-managed Python support depends on uv's managed Python distribution
+  coverage, network/cache state, and successful `uv self update` in
+  devcontainer-like environments.
 
 ## Last Validation
 
-Most recent validation recorded from the runtime reporting and version-sync
+Most recent validation from the uv-managed Python slice on 2026-06-03:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+Result:
+
+- Python unit discovery passed, 42 tests.
+
+Previously recorded validation from the runtime reporting and version-sync
 slice on 2026-05-29:
 
 ```bash
