@@ -29,7 +29,7 @@
     "onStartupFinished"
   ],
   "dependencies": {
-    "@types/vscode": "^1.97.0",
+    "@types/vscode": "^1.125.0",
     "@vscode/python-extension": "^1.0.5"
   },
   "devDependencies": {
